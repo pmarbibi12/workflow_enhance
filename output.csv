@@ -1,0 +1,16 @@
+Product ID,Updated,Status,Instance ID,Version
+07d1c32e-8f8d-41ba-b0c1-6755b12261fb,2023-09-13 05:14:10 CDT,"['Unique Sent', 'Physical']",ed8c4bf9-f507-4dff-aa05-e60156d77ede,41
+08696a82-139e-43c8-b54c-dedc568f0073,2023-09-09 05:09:22 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",f69526ca-f436-4625-9547-320e0b62ce3d,41
+086eb3e4-89d0-4f46-b6ed-11a8834deb3e,2023-09-12 16:20:32 CDT,['Excluded Marketplace Items'],0e9459f1-ebe3-475c-94df-17eec44f27b0,41
+086d9f2e-cc52-4086-a898-e540b862e5c0,2023-09-13 05:14:13 CDT,"['Unique Sent', 'Physical']",18dee6f2-041e-4a87-90cb-443e2934c091,41
+085d3421-a6b2-4448-8242-7a59f7e5226a,2023-09-09 05:09:22 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",6cad499a-1444-4a1b-bfec-f79f9e19fc4c,41
+0859d695-fa50-4a51-8c30-2a73f9453991,2023-09-13 05:14:10 CDT,"['Unique Sent', 'Physical']",7be92c89-b032-4db6-ba8d-a8cb9aa73ff6,41
+085a3eb2-9c57-4825-a171-bef771aa30f4,2023-09-09 05:09:39 CDT,"['Unique Sent', 'Brand']",642d5828-991d-4696-8628-1b78ce4c5cd5,41
+083f1e90-47fb-414e-a228-f89ab678b646,2023-09-02 05:09:15 CDT,"['Unique Sent', 'Brand']",7b9affb9-8b16-48f0-8286-d76efce6658e,40
+08470d8e-e7bd-4062-8d2c-5c7057c83289,2023-09-13 05:14:22 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",af5dd21b-1263-4f47-9524-995694211462,41
+083d7b1a-1ebb-4cd5-9576-1acabcfbba44,2023-09-13 05:14:21 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",8be6d565-7d57-41e9-bfd5-cccf529a2dd0,41
+081c8426-ae3f-4f36-a0af-ef7730708352,2023-09-13 05:14:22 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",0adb4e8f-5367-45f1-be61-c5820b81e392,41
+081b39c0-1ac1-405c-9f66-747e2c74e305,2023-09-09 05:09:39 CDT,"['Unique Sent', 'Brand']",d0a61c4d-3f38-4e47-bd13-57c0320c0aab,40
+07f25bf3-9f78-48dd-9cbe-46349d86987b,2023-09-09 05:09:39 CDT,"['Unique Sent', 'Brand']",92f6b1a8-ca54-475f-a4ec-e1a8aef24633,41
+07d0a0c5-985b-482f-ba1d-c8cdfcd0032d,2023-09-13 05:14:08 CDT,"['Unique Sent', 'Physical']",74c7457e-cc75-4484-8d72-097db429d6f6,41
+07d0fb5f-3240-4bfd-8d55-eb9bb363a55c,2023-09-16 05:07:45 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",1f836e70-d347-46c1-a1d3-53c0dd5e9240,41
