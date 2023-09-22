@@ -1,16 +1,52 @@
 Product ID,Updated,Status,Instance ID,Version
-07d1c32e-8f8d-41ba-b0c1-6755b12261fb,2023-09-13 05:14:10 CDT,"['Unique Sent', 'Physical']",ed8c4bf9-f507-4dff-aa05-e60156d77ede,41
-08696a82-139e-43c8-b54c-dedc568f0073,2023-09-09 05:09:22 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",f69526ca-f436-4625-9547-320e0b62ce3d,41
-086eb3e4-89d0-4f46-b6ed-11a8834deb3e,2023-09-12 16:20:32 CDT,['Excluded Marketplace Items'],0e9459f1-ebe3-475c-94df-17eec44f27b0,41
-086d9f2e-cc52-4086-a898-e540b862e5c0,2023-09-13 05:14:13 CDT,"['Unique Sent', 'Physical']",18dee6f2-041e-4a87-90cb-443e2934c091,41
-085d3421-a6b2-4448-8242-7a59f7e5226a,2023-09-09 05:09:22 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",6cad499a-1444-4a1b-bfec-f79f9e19fc4c,41
-0859d695-fa50-4a51-8c30-2a73f9453991,2023-09-13 05:14:10 CDT,"['Unique Sent', 'Physical']",7be92c89-b032-4db6-ba8d-a8cb9aa73ff6,41
-085a3eb2-9c57-4825-a171-bef771aa30f4,2023-09-09 05:09:39 CDT,"['Unique Sent', 'Brand']",642d5828-991d-4696-8628-1b78ce4c5cd5,41
-083f1e90-47fb-414e-a228-f89ab678b646,2023-09-02 05:09:15 CDT,"['Unique Sent', 'Brand']",7b9affb9-8b16-48f0-8286-d76efce6658e,40
-08470d8e-e7bd-4062-8d2c-5c7057c83289,2023-09-13 05:14:22 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",af5dd21b-1263-4f47-9524-995694211462,41
-083d7b1a-1ebb-4cd5-9576-1acabcfbba44,2023-09-13 05:14:21 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",8be6d565-7d57-41e9-bfd5-cccf529a2dd0,41
-081c8426-ae3f-4f36-a0af-ef7730708352,2023-09-13 05:14:22 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",0adb4e8f-5367-45f1-be61-c5820b81e392,41
-081b39c0-1ac1-405c-9f66-747e2c74e305,2023-09-09 05:09:39 CDT,"['Unique Sent', 'Brand']",d0a61c4d-3f38-4e47-bd13-57c0320c0aab,40
-07f25bf3-9f78-48dd-9cbe-46349d86987b,2023-09-09 05:09:39 CDT,"['Unique Sent', 'Brand']",92f6b1a8-ca54-475f-a4ec-e1a8aef24633,41
-07d0a0c5-985b-482f-ba1d-c8cdfcd0032d,2023-09-13 05:14:08 CDT,"['Unique Sent', 'Physical']",74c7457e-cc75-4484-8d72-097db429d6f6,41
-07d0fb5f-3240-4bfd-8d55-eb9bb363a55c,2023-09-16 05:07:45 CDT,"['Unique Sent', 'Digital', 'WaitingReject']",1f836e70-d347-46c1-a1d3-53c0dd5e9240,41
+7fad6690-a1ca-4f75-9ad7-25783d353e6e,2023-08-29T08:46:26.443+00:00,"['Feed Exclusions', 'Physical']",8da3ac20-6799-442a-b2ab-423ebabeffd1,40
+7fae369b-9dcf-4b90-a411-e853cee54176,2023-08-29T08:46:26.57+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",1853833e-67c4-4fae-b5ef-a8e9af2e187f,40
+7fa46540-c93d-4026-9313-a54f8b61ac85,2023-08-29T08:46:26.273+00:00,['Feed Exclusions'],7bc90d38-3485-44b2-a248-3cc228efeaeb,40
+7faa6e54-334c-4182-b207-e2f6d4f6d6c9,2023-08-29T08:46:26.633+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",df2a7430-c2fb-4c40-a57e-5b90bc8b6262,40
+7faa4d40-e6c4-486c-b113-141012d0a804,2023-09-06T05:06:44.29+00:00,"['Unique Sent', 'Brand']",5954d7c4-9f5e-429b-8a1a-76203e6690d8,40
+7fa5f07c-fb3e-40ea-9efe-1991d5ce75b0,2023-09-07T18:48:36.863+00:00,"['Unique Sent', 'Brand']",a618ffd7-8c9b-40e0-ae74-a9e7d6f4cd52,40
+7f9faedc-cd0c-4b35-97e8-988f744d7d66,2023-08-29T08:46:23.6+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",11a674a0-6898-4ef9-b476-05aac0b9175b,40
+7e9dffb9-e9bf-449b-b695-ebadab141a6d,2023-08-29T08:49:14.29+00:00,"['Feed Exclusions', 'Physical']",99872158-4599-46a5-8c59-55ad60cceec2,40
+7ea5bb0c-b08f-4116-bf03-c02d0fb65473,2023-08-29T08:49:16.51+00:00,"['Feed Exclusions', 'Physical']",9aeaaf91-bc34-48f0-8ca3-9d4c71ba425d,40
+7e962b35-db5b-4cb1-8b36-bbc310bfc1e4,2023-08-29T08:49:18.587+00:00,['Feed Exclusions'],8790bf36-04b2-4f55-8812-cccd927e0a2e,40
+7e95e3a1-69aa-4cb5-93b3-ac7fb228e63d,2023-08-29T08:49:17.773+00:00,"['Feed Exclusions', 'Physical']",fc73d2cb-eebc-42f7-bd2c-7417817fee15,40
+7e8c9e7f-6098-4ae0-997d-9f5e2f358646,2023-08-29T08:49:18.087+00:00,['Feed Exclusions'],d4cca205-c11d-4eb6-aefe-d649e82dcb99,40
+7e8bea26-fbf1-4d57-be4c-35a6450c0044,2023-08-29T08:49:17.057+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",dd4750d2-e1bb-48ea-b485-aa793943e362,40
+7e7a1fed-68e3-44b8-a71d-15b9f6682ef5,2023-08-29T08:49:16.383+00:00,['Feed Exclusions'],2e7515a9-a4d9-4c25-ab87-a14f43a9ed1a,40
+7e721f6e-e830-4b92-a349-cef30936b00e,2023-08-29T08:49:16.743+00:00,"['Feed Exclusions', 'Physical']",6c9d2804-a964-4e61-8013-90a3576763e8,40
+7e73f927-5111-4b34-b984-537f18404b53,2023-08-29T08:49:15.57+00:00,['Feed Exclusions'],2ea67cec-f798-47f6-af9c-4536bf332cdd,40
+7ec050d2-36e5-4a16-a5a7-47f9111e9b6b,2023-09-20T05:13:16.663+00:00,"['Unique Sent', 'Brand']",1dc0a982-8e88-46b3-b909-9eace67ec87b,41
+7ea6f615-f831-4351-9f81-f00c63794467,2023-09-20T05:12:59.883+00:00,"['Unique Sent', 'Brand']",317660c7-b99a-45d2-b9b7-c1addccb36a4,41
+7eb7a309-b4ec-42cb-8e01-45aead11e454,2023-08-29T08:48:31.257+00:00,"['Feed Exclusions', 'Physical']",0985f8df-dfea-4afe-8c49-bc0d51d9d072,40
+7eac23f8-b956-4e19-9995-e677fb090c8f,2023-08-29T08:48:29.553+00:00,"['Feed Exclusions', 'Physical']",8a8bf829-d07f-4bd2-be5a-f74105a0002f,40
+7e986047-f0c7-4e78-ade2-91dfc8c3d06a,2023-08-29T08:49:17.197+00:00,"['Feed Exclusions', 'Physical']",641dfd65-7aaf-4e3c-bb1e-eb2ca2895fe0,40
+7e9042b5-ff26-4c7e-9ff8-cb1bdd91c163,2023-09-08T05:05:33.643+00:00,['Feed Exclusions'],1a8aeefc-40a4-4bba-9276-960c3873f168,40
+7e7782d8-3597-4735-86e5-58893a10ea93,2023-08-29T08:49:18.18+00:00,"['Feed Exclusions', 'Physical']",70485cdb-ed88-4fe6-8360-5ad0b5950970,40
+7e7a01c6-5bf2-45a0-8d61-09bfd14e2d70,2023-08-29T08:49:16.163+00:00,"['Feed Exclusions', 'Physical']",97d0049c-db59-413f-afba-70331f19bc78,40
+7e6c6080-0b45-47d8-a0e0-f684e32a3f50,2023-08-29T08:49:16.103+00:00,"['Feed Exclusions', 'Physical']",7d4b6aa0-6f1e-44dd-8689-6d71e7a7e0aa,40
+7e63575e-ec97-401b-81c1-24615cbba28a,2023-08-29T08:49:15.43+00:00,"['Feed Exclusions', 'Physical']",87cf3e41-0c40-4cef-9e4b-6dd71c084f54,40
+7e6744fa-884c-4d30-9190-f8186d07bdde,2023-08-29T08:49:18.477+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",cd6d2225-92fb-41d2-b341-f310801b4996,40
+7e959e98-0a7d-4d22-9448-6babf4130830,2023-08-29T08:49:17.57+00:00,"['Feed Exclusions', 'Physical']",861f9db9-ff94-4e31-9883-eccd21757338,40
+7e664eb7-825f-421e-bf6c-af10e7daf368,2023-09-08T05:03:11.423+00:00,['Feed Exclusions'],3d2a4d4a-5080-4994-a83e-42374ca09661,40
+7e58a602-55af-4b35-804e-364104bf0203,2023-09-20T05:13:00.587+00:00,"['Unique Sent', 'Brand']",cc5ffc66-45a0-4323-ac32-224c8d31a368,41
+7e2df51b-245c-463f-ab6c-9c596b7c8c29,2023-08-29T08:49:15.227+00:00,"['Feed Exclusions', 'Physical']",b26b3e93-12c6-48a4-82e9-d11b08f97ffb,40
+7e310128-8f6a-44ca-9923-4590a6185b78,2023-08-29T08:49:12.867+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",bdd06532-8cc0-48a8-81ca-5b69f4ab7128,40
+7e47ebcf-9889-4e28-bbf4-583c1e884d0f,2023-09-08T05:02:38.69+00:00,['Feed Exclusions'],9c28de5b-3ead-4111-add0-a7523729ed0d,40
+7e3fa7ca-1e9f-471b-bdf0-7010f3e88be8,2023-08-29T08:49:15.557+00:00,['Feed Exclusions'],610067e0-00ba-4e40-8bed-e7d5aa14d241,40
+7e3729a6-a304-497b-913a-c9bb9be7de3a,2023-08-29T08:49:13.4+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",913cfc5d-368a-4e45-a301-d6b5055ecfdb,40
+7e340dff-b646-4999-9356-814dba124682,2023-08-29T08:49:13.46+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",88b157a3-c6a1-44d7-bc26-0981d0d78aa1,40
+7e1baaef-1bfc-40f9-b8f6-d5420f213171,2023-09-06T05:06:44.243+00:00,"['Unique Sent', 'Brand']",c2b2b5b1-9b9d-4574-af92-8b6d25487da2,40
+7e2fe31c-0e8c-4771-8d76-e7e49e979479,2023-09-08T05:04:46.94+00:00,['Feed Exclusions'],15e7cdac-53b7-48f5-8d0c-904c0e2440f9,40
+7e0a632c-4a97-46c3-a54b-a02a7739c09f,2023-08-29T08:49:14.307+00:00,"['Feed Exclusions', 'Physical']",ab1889c1-497d-4e61-9ece-1a42a9c376fd,40
+7e6c4e70-8de1-4493-8899-580fab71e6d1,2023-08-29T08:49:13.603+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",e4a9b8ca-82a9-4942-b639-2575399ff11c,40
+7e4d058b-da3a-494f-96ed-90ecbb02378b,2023-08-29T08:49:14.913+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",55ea7169-de89-442a-b94d-365fdf262e9a,40
+7e491111-4104-46bf-a7df-fd1c63a131d7,2023-09-20T05:13:06.26+00:00,"['Unique Sent', 'Brand']",f616fba0-79a3-4d74-a2c8-9d7de335bbe5,41
+7e5133fc-aa20-46ee-a0ec-4b5c63c8bfd9,2023-08-29T08:49:17.477+00:00,"['Feed Exclusions', 'Physical']",72c96136-4fd6-45b1-896a-0e202cd65faf,40
+7e4a0295-b09a-4127-a518-2a60a6c8ada4,2023-08-29T08:49:13.54+00:00,"['Feed Exclusions', 'Physical']",504fb90f-ba19-4935-8c0d-2f9367e4bbde,40
+7e1aaca0-4009-43f6-89f5-7e680220c0c6,2023-08-29T08:49:15.227+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",e7520851-eb71-46bf-bcdd-f3040b402431,40
+7e183157-9831-465c-87b4-9198f43e9cfe,2023-09-08T05:03:59.813+00:00,['Feed Exclusions'],77968d7d-d734-48e2-9493-1742678bd358,40
+7e11acc0-a411-4907-8f3e-6f2fb75e3881,2023-08-29T08:49:17.807+00:00,"['Feed Exclusions', 'Physical']",54abbdf2-95fa-4372-915a-8cfcc4a1f692,40
+7e06fbbf-fc17-4d1a-8534-29d63425eadd,2023-08-29T08:49:16.96+00:00,"['Feed Exclusions', 'Physical']",85a859bc-aab5-489b-886e-12e3e2c29062,40
+7e082a10-9626-4631-baca-2f9b91bcac76,2023-08-29T08:49:18.117+00:00,"['Feed Exclusions', 'Physical']",908e306f-c4bd-46f8-b35b-64e27a1a2b47,40
+7ec111eb-9798-4d23-9890-d28da78e6881,2023-08-29T08:48:32.603+00:00,"['Feed Exclusions', 'Digital', 'WaitingReject']",c228ea9c-855c-4ec8-bf39-31d7045576ff,40
+7eba2303-ec7d-4f88-b97c-cc1f4cb87830,2023-08-29T08:48:27.307+00:00,"['Feed Exclusions', 'Physical']",96ada23e-74bf-42dc-bf51-24f2d836dabe,40
