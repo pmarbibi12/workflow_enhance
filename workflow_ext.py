@@ -68,6 +68,14 @@ class WarningWindow(customtkinter.CTkToplevel):
         self.grid_columnconfigure((0,1), weight=1)
         self.grid_rowconfigure((0,1), weight=1)
 
+class UpgradeWindow(customtkinter.CTkToplevel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.title("Workflow_Ext")
+        self.geometry("400x150+500+500")
+        self.grid_columnconfigure((0,1), weight=1)
+        self.grid_rowconfigure((0,1), weight=1)
+
 
 class WorkflowEnhance(customtkinter.CTk):
     def __init__(self):
@@ -180,6 +188,10 @@ class WorkflowEnhance(customtkinter.CTk):
         # row 1
         self.search_guids_button = customtkinter.CTkButton(self.product_guids_frame, text="Load Workflow First", command=self.start_progress_bar, state="disabled")
         self.search_guids_button.grid(row=1, column=0, padx=20, pady=15)
+
+        # row 2
+        self.upgrade_button = customtkinter.CTkButton(self.product_guids_frame, text="Load Workflow First", command=self.upgrade_items, state="disabled")
+        self.upgrade_button.grid(row=2, column=0, padx=20, pady=(0,15))
 
         ### output Frame
         self.output_frame = customtkinter.CTkFrame(self, width=500, corner_radius=10)
@@ -333,6 +345,7 @@ class WorkflowEnhance(customtkinter.CTk):
 
                 self.search_guids_button.configure(state="disabled", text="Load Workflow First")
                 self.export_state_button.configure(state="disabled", text="Load Workflow First")
+                self.upgrade_button.configure(state="disabled", text="Load Workflow First")
 
                 self.wf_name.configure(text="                        ")
                 self.title("Workflow_Ext")
@@ -345,6 +358,7 @@ class WorkflowEnhance(customtkinter.CTk):
 
                 self.search_guids_button.configure(state="normal", text="Search")
                 self.export_state_button.configure(state="normal", text="Export State")
+                self.upgrade_button.configure(state="normal", text="Upgrade Items")
 
                 self.wf_name.configure(text=self.workflow_name)
                 self.title(f"Workflow_Ext -- {self.workflow_name} ({self.env})")
@@ -385,14 +399,9 @@ class WorkflowEnhance(customtkinter.CTk):
         if self.rowNum > 0:
             self.delete_table()
  
-        try:
-            product_guids = self.product_guids_textbox.get("0.0", "end")
-        except Exception as e:
-            print(f"Error getting text from product_guids_textbox: {e}")
-            product_guids = ""
-        guids_array = [line.strip() for line in product_guids.split('\n') if line.strip()]
+        self.guids_array = self.get_guids()
 
-        data = self.getStatuses(guids_array)
+        data = self.getStatuses(self.guids_array)
         self.workflow_statuses = pd.DataFrame(data)
         
         df_rows = self.workflow_statuses.to_numpy().tolist()
@@ -498,7 +507,6 @@ class WorkflowEnhance(customtkinter.CTk):
         self.warn_window.cancel_button = customtkinter.CTkButton(self.warn_window, text="Cancel", command=self.warn_window.destroy)
         self.warn_window.cancel_button.grid(row=1, column=1, pady=(5,10), padx=10)
 
-
     def export_to_csv(self, filename):
         
         self.warn_window.destroy()
@@ -509,6 +517,74 @@ class WorkflowEnhance(customtkinter.CTk):
         self.output_window.grab_set()
         self.output_window.output_label = customtkinter.CTkLabel(self.output_window, text=f"CSV file saved as {filename}")
         self.output_window.output_label.grid(row=0, column=0, pady=15)
+
+    def upgrade_items(self):
+        self.guids_array = self.get_guids()
+
+        data = self.getStatuses(self.guids_array)
+
+        instance_ids = data["Instance ID"]
+
+        skip ="?skipApplyingStatuses=true"
+        upgrade_url = f"https://{self.env_url}/api/workflow/Debug/upgrade/{self.workflowId}/"
+
+        instance_index = 0
+
+        headers = self.get_headers()
+
+        success = []
+
+        true_num = 0
+        false_num = 0
+
+        for guid in self.guids_array:
+            url = f"{upgrade_url}{instance_ids[instance_index]}/{guid}{skip}"
+            response = requests.get(url, headers=headers)
+            
+            if response.status_code == 200:
+                success.append(True)
+                true_num += 1
+            else:
+                success.append(False)
+                false_num +=1
+
+        data = {
+            "Product GUIDs": self.guids_array,
+            "Success": success
+        }
+
+        self.upgrade_window = UpgradeWindow(self)
+        self.upgrade_window.grab_set()
+        self.upgrade_window.output_label = customtkinter.CTkLabel(self.upgrade_window, text=f"{true_num} items upgraded")
+        self.upgrade_window.output_label.grid(row=0, column=0, padx=5, pady=5)
+        self.upgrade_window.output_label2 = customtkinter.CTkLabel(self.upgrade_window, text=f"{false_num} items failed to upgrade")
+        self.upgrade_window.output_label2.grid(row=1, column=0, padx=5, pady=5)
+        self.upgrade_window.ok_button = customtkinter.CTkButton(self.upgrade_window, text="Ok", command = self.upgrade_window.destroy)
+        self.upgrade_window.ok_button.grid(row=0, column=1, padx=5, pady=5)
+        self.upgrade_window.export_button = customtkinter.CTkButton(self.upgrade_window, text="Export", command =lambda: self.export_upgrades(data,self.upgrade_window))
+        self.upgrade_window.export_button.grid(row=1, column=1, padx=5, pady=5)
+
+    def export_upgrades(self, data, upgrade_window):
+        upgrade_window.destroy()
+
+        df = pd.DataFrame(data)
+        df.to_csv("../../upgrade_results.csv", index=False)
+
+        self.output_window = OutputWindow(self)
+        self.output_window.grab_set()
+        self.output_window.output_label = customtkinter.CTkLabel(self.output_window, text=f"Results saved to upgrade_results.csv")
+        self.output_window.output_label.grid(row=0, column=0, pady=15)
+
+    def get_guids(self):
+        try:
+            product_guids = self.product_guids_textbox.get("0.0", "end")
+        except Exception as e:
+            print(f"Error getting text from product_guids_textbox: {e}")
+            product_guids = ""
+        guids_array = [line.strip() for line in product_guids.split('\n') if line.strip()]
+
+        return guids_array
+
 
 
 
