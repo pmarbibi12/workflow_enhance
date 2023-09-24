@@ -6,6 +6,8 @@ import requests
 import json
 import os
 import threading
+import concurrent.futures
+import time
 
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
@@ -422,14 +424,16 @@ class WorkflowEnhance(customtkinter.CTk):
     def create_table(self):
         if not self.table_created:
             self.output_to_csv_button.configure(state="normal")
-            df_rows = self.workflow_statuses.to_numpy().tolist()
+            df_rows = [self.workflow_statuses.columns.tolist()] + self.workflow_statuses.to_numpy().tolist()
 
             self.rowNum = len(df_rows)
 
-            rownum = 1
-            for row in df_rows:
-                self.df_frame.tree_view.add_row(index=rownum, values=row)
-                rownum += 1
+            self.df_frame.tree_view = CTkTable(self.df_frame, row=self.rowNum, column=5, values=df_rows)
+            self.df_frame.tree_view.grid(row=0,column=0)
+            # rownum = 1
+            # for row in df_rows:
+            #     self.df_frame.tree_view.add_row(index=rownum, values=row)
+            #     rownum += 1
 
             self.search_guids_button.configure(state="normal")
             self.progress_bar.stop()
@@ -439,56 +443,44 @@ class WorkflowEnhance(customtkinter.CTk):
             self.table_created = True
        
     def getStatuses(self):
-
-        # print("thread started")
-        timeStamp = []
-        wf_version = []
-        instaceIds = []
-        statuses = []
-
-        status_search_url = f"https://{self.env_url}/api/workflow/WorkflowGrain/status/{self.workflowId}/"
-
-        for product in self.guids_array:
-            
-            response = requests.get(status_search_url+product, headers=self.headers)
+        start_time = time.time()
+        def fetch_status(product):
+            status_search_url = f"https://{self.env_url}/api/workflow/WorkflowGrain/status/{self.workflowId}/{product}"
+            response = requests.get(status_search_url, headers=self.headers)
             
             if response.status_code == 200:
                 json_response = response.json()
                 timestamp_response = json_response["Timestamp"]
-                timeStamp.append(timestamp_response)
                 status_response = json_response["Statuses"]
                 
-                stat_names = []
-                
-                for status in status_response:
-                    if status in self.steps_with_names:
-                        stat_names.append(self.steps_with_names[status])
-                    else:
-                        stat_names.append(status)
-
+                stat_names = [self.steps_with_names.get(status, status) for status in status_response]
                 stat_names_str = ", ".join(stat_names)
 
-                statuses.append(stat_names_str)
-                wf_version.append(json_response["WorkflowVersion"])
-                instaceIds.append(json_response["WorkflowInstanceId"])
+                return {
+                    "Product ID": product,
+                    "Updated": timestamp_response,
+                    "Status": stat_names_str,
+                    "Instance ID": json_response["WorkflowInstanceId"],
+                    "Version": json_response["WorkflowVersion"]
+                }
             else:
-                timeStamp.append("Null")
-                statuses.append("Null")
-                wf_version.append("Null")
-                instaceIds.append("Null")
+                return {
+                    "Product ID": product,
+                    "Updated": "Null",
+                    "Status": "Null",
+                    "Instance ID": "Null",
+                    "Version": "Null"
+                }
 
-        print("statuses retrieved")
-
-        data = {
-            "Product ID" : self.guids_array,
-            "Updated" : timeStamp,
-            "Status" : statuses,
-            "Instance ID": instaceIds,
-            "Version" : wf_version
-        }
-
-        self.workflow_statuses = pd.DataFrame(data)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            results = list(executor.map(fetch_status, self.guids_array))
         
+        end_time = time.time()  # Record the end time
+        elapsed_time = end_time - start_time  # Calculate the elapsed time
+
+        print(f"statuses retrieved in {elapsed_time:.2f} seconds")
+
+        self.workflow_statuses = pd.DataFrame(results)
         self.after(0, self.create_table)
          
     def get_headers(self):
@@ -582,31 +574,40 @@ class WorkflowEnhance(customtkinter.CTk):
         return guids_array
 
     def upgrade_items(self):
-        instance_ids = self.workflow_statuses["Instance ID"]
+        start_time = time.time()  # Record the start time
 
-        skip ="?skipApplyingStatuses=true"
+        instance_ids = self.workflow_statuses["Instance ID"]
+        skip = "?skipApplyingStatuses=true"
         upgrade_url = f"https://{self.env_url}/api/workflow/Debug/upgrade/{self.workflowId}/"
 
-        instance_index = 0
         success = []
         self.true_num = 0
         self.false_num = 0
 
-        for guid in self.guids_array:
+        def process_upgrade(guid):
+            instance_index = self.guids_array.index(guid)  # Get the index for the current GUID
             url = f"{upgrade_url}{instance_ids[instance_index]}/{guid}{skip}"
             response = requests.get(url, headers=self.headers)
-            
+
             if response.status_code == 200:
                 success.append(True)
                 self.true_num += 1
             else:
                 success.append(False)
-                self.false_num +=1
+                self.false_num += 1
+
+        # Use a ThreadPoolExecutor with a maximum of 20 workers
+        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+            executor.map(process_upgrade, self.guids_array)
+
+        end_time = time.time()  # Record the end time
+        elapsed_time = end_time - start_time  # Calculate the elapsed time
 
         self.upgrade_data = {
             "Product GUIDs": self.guids_array,
             "Success": success
         }
+        print(f"Upgrade completed in {elapsed_time:.2f} seconds")
 
         self.after(0, self.upgrade_output)
 
@@ -627,6 +628,7 @@ class WorkflowEnhance(customtkinter.CTk):
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
+        
 if __name__ == "__main__":
     app = WorkflowEnhance()
     app.mainloop()
