@@ -935,7 +935,7 @@ class WorkflowEnhance(customtkinter.CTk):
         list_values= []
 
         if not self.saved_workflows:
-            list_values = self.workflow_values
+            list_values = [self.workflow_values]
             with open("saved_workflows.json", 'w') as json_file:
                 json.dump(list_values, json_file)
             self.load_saved_workflows()
