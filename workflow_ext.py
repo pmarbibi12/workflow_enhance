@@ -1,14 +1,15 @@
 import customtkinter
 import pandas as pd
-import CTkTable
-from CTkTable import *
+# import CTkTable
+# from CTkTable import *
 import requests
 import json
 import os
 import threading
 import concurrent.futures
 import time
-from CTkTableRowSelector import *
+from pandastable import Table
+from CTkMessagebox import CTkMessagebox
 
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
@@ -21,8 +22,8 @@ class OutputFrame(customtkinter.CTkScrollableFrame):
     
         columns = [["Product ID", "Updated", "Status", "Instance ID", "Version"]]
 
-        self.tree_view = CTkTable(self, row=1 , column=5, values=columns)
-        self.tree_view.grid(row=0,column=0)
+        # self.tree_view = CTkTable(self, row=1 , column=5, values=columns)
+        # self.tree_view.grid(row=0,column=0)
 
 class SuccessWindow(customtkinter.CTkToplevel):
     def __init__(self, *args, **kwargs):
@@ -104,6 +105,9 @@ class WorkflowEnhance(customtkinter.CTk):
         self.table = None
         self.filtered_df = pd.DataFrame()
         self.workflow_versions = []
+        self.pt = None
+        self.workflow_values = []
+        self.saved_workflows = []
 
         # configure window
         self.title("Workflow_Ext")
@@ -114,6 +118,7 @@ class WorkflowEnhance(customtkinter.CTk):
         self.grid_rowconfigure((0, 1, 2), weight=1)
 
         self.create_sidebar_widgets()
+        self.load_saved_workflows()
         self.create_search_widgets()
         self.create_output_widgets()
         self.create_additional_actions_widgets()
@@ -125,7 +130,7 @@ class WorkflowEnhance(customtkinter.CTk):
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=10)
         self.sidebar_frame.grid(row=0, column=0, rowspan=10, padx = 10, pady = 10, sticky="nsew")
         self.sidebar_frame.grid_columnconfigure(0, weight=1)
-        self.sidebar_frame.grid_rowconfigure(10, weight=1)
+        self.sidebar_frame.grid_rowconfigure(12, weight=1)
 
         # row 0
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Load Workflow", font=customtkinter.CTkFont(size=20, weight="bold"))
@@ -135,47 +140,54 @@ class WorkflowEnhance(customtkinter.CTk):
         self.workflow_id_label = customtkinter.CTkLabel(self.sidebar_frame, text="Workflow ID:", anchor="w")
         self.workflow_id_label.grid(row=1, column=0, padx=20, pady=(10, 0))
         self.workflow_id = customtkinter.CTkEntry(self.sidebar_frame, placeholder_text="Workflow ID")
-        self.workflow_id.grid(row=2, column=0, padx=20, pady=10)
+        self.workflow_id.grid(row=2, column=0, padx=20, pady=(8,10))
 
         # row 3,4
         self.workflow_dataowner_label = customtkinter.CTkLabel(self.sidebar_frame, text="DataOwner ID:", anchor="w")
         self.workflow_dataowner_label.grid(row=3, column=0, padx=20, pady=(10, 0))
         self.workflow_dataowner = customtkinter.CTkEntry(self.sidebar_frame, placeholder_text="Environment Specific")
-        self.workflow_dataowner.grid(row=4, column=0, padx=20, pady=10)
+        self.workflow_dataowner.grid(row=4, column=0, padx=20, pady=(8,10))
 
         # row 5,6
         self.environment_selector_label = customtkinter.CTkLabel(self.sidebar_frame, text="Environment:", anchor="w")
         self.environment_selector_label.grid(row=5, column=0, padx=20, pady=(10, 0))
         self.environment_selector = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Prod", "UAT", "QA"])
-        self.environment_selector.grid(row=6, column=0, padx=20, pady=(10, 10))
+        self.environment_selector.grid(row=6, column=0, padx=20, pady=(8,10))
 
         # row 7,8
         self.auth_entry_label = customtkinter.CTkLabel(self.sidebar_frame, text="Auth Code:", anchor="w")
         self.auth_entry_label.grid(row=7, column=0, padx=20, pady=(10, 0))
         self.auth_entry = customtkinter.CTkEntry(self.sidebar_frame, placeholder_text="Auth Code")
-        self.auth_entry.grid(row=8, column=0, padx=20, pady=10)
+        self.auth_entry.grid(row=8, column=0, padx=20, pady=(8,10))
 
         # row 9
         self.load_button = customtkinter.CTkButton(self.sidebar_frame, text="Load", command=self.load_clicked)
         self.load_button.grid(row=9, column=0, padx=20, pady=10)
 
+        # row 10
+        self.save_button = customtkinter.CTkButton(self.sidebar_frame, text="Save Workflow", command=self.save_workflow, state="disabled")
+        self.save_button.grid(row=10, column=0, padx=20, pady=10)
+
+        self.workflow_selector = customtkinter.CTkOptionMenu(self.sidebar_frame,  command=self.load_workflow)
+        self.workflow_selector.grid(row=11, column=0, padx=20, pady=10)
+
         # row 11
         self.wf_name_label = customtkinter.CTkLabel(self.sidebar_frame, text="Workflow Name:")
-        self.wf_name_label.grid(row=11, column=0, padx=20, pady=(10, 0))
+        self.wf_name_label.grid(row=13, column=0, padx=20, pady=(10, 0))
 
         # row 12
         self.wf_frame = customtkinter.CTkFrame(self.sidebar_frame, height = 40, border_color="gray", border_width=2)
-        self.wf_frame.grid(row=12, column=0, padx=10, pady=(0,15))
+        self.wf_frame.grid(row=14, column=0, padx=10, pady=(0,15))
         self.wf_frame.grid_columnconfigure(0, weight=1)
 
         self.wf_name = customtkinter.CTkLabel(self.wf_frame, text="                        ",font=customtkinter.CTkFont(size=14, weight="bold"))
         self.wf_name.grid(row=0, column=0, pady=5, padx=15)
 
         self.appearance_label = customtkinter.CTkLabel(self.sidebar_frame, text="Theme:")
-        self.appearance_label.grid(row=13, column=0, padx=5, pady=(5, 5))
+        self.appearance_label.grid(row=15, column=0, padx=5, pady=(5, 5))
 
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Dark", "Light", "System"], command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=14,column=0, pady=(5,15), padx=5)
+        self.appearance_mode_optionemenu.grid(row=16,column=0, pady=(5,15), padx=5)
 
 
         ### search Frame
@@ -204,12 +216,21 @@ class WorkflowEnhance(customtkinter.CTk):
         ## search-productguids rows
 
         # row 0
-        self.product_guids_textbox = customtkinter.CTkTextbox(self.product_guids_frame, width=260)
+        self.product_guids_textbox = customtkinter.CTkTextbox(self.product_guids_frame, width=270)
         self.product_guids_textbox.grid(row=0, column=0, sticky="nsew")
         
         # row 1
-        self.search_guids_button = customtkinter.CTkButton(self.product_guids_frame, text="Load Workflow First", command=self.search_clicked, state="disabled")
-        self.search_guids_button.grid(row=1, column=0, padx=20, pady=15)
+
+        self.search_frame = customtkinter.CTkFrame(self.product_guids_frame)
+        self.search_frame.grid(row=1, column=0)
+        self.search_frame.grid_columnconfigure((0,1), weight=1)
+
+        self.search_guids_button = customtkinter.CTkButton(self.search_frame, text="Load Workflow First", command=self.search_clicked, state="disabled")
+        self.search_guids_button.grid(row=0, column=0, padx=20, pady=15)
+
+        self.search_entry = customtkinter.CTkEntry(self.search_frame, width=30)
+        self.search_entry.grid(row=0, column=1,padx=5)
+        self.search_entry.insert(0,20)
 
         # row 2
         self.upgrade_button = customtkinter.CTkButton(self.product_guids_frame, text="Search Items First", command=self.start_upgrade, state="disabled")
@@ -253,7 +274,8 @@ class WorkflowEnhance(customtkinter.CTk):
 
         self.df_frame = OutputFrame(self.output_frame)
         self.df_frame.grid(row=2, column=0, padx =15, pady = (10,15), sticky="nsew")
-        self.df_frame.grid_columnconfigure(0, weight = 1)
+        # self.df_frame.grid_columnconfigure(0, weight = 1)
+        self.df_frame.grid_rowconfigure(0,weigh=1)
 
         self.progress_bar = customtkinter.CTkProgressBar(self.output_frame, height=10, width=500, indeterminate_speed=2)
         self.progress_bar.grid(row=3, column=0, pady=(10,25))
@@ -278,9 +300,6 @@ class WorkflowEnhance(customtkinter.CTk):
         self.csv_file_entry = customtkinter.CTkEntry(self.additional_actions_frame, placeholder_text="filename.csv")
         self.csv_file_entry.grid(row=2, column=0, pady=(10,0))
 
-        self.row_selector = CTkTableRowSelector(self.df_frame.tree_view)
-
-        # self.output_to_csv_button = customtkinter.CTkButton(self.additional_actions_frame, text="Export to CSV", command=lambda: print(self.row_selector.get()), state="disabled")
         self.output_to_csv_button = customtkinter.CTkButton(self.additional_actions_frame, text="Export to CSV", command=self.overwrite_warning, state="disabled")
         self.output_to_csv_button.grid(row=3, column=0, pady=(20,15))
 
@@ -356,6 +375,8 @@ class WorkflowEnhance(customtkinter.CTk):
         self.env = self.environment_selector.get()
         self.env_url = self.get_environment_url(self.env)
         self.headers = self.get_headers()
+        
+        
 
         self.steps_with_names = self.get_status_info()
 
@@ -381,8 +402,6 @@ class WorkflowEnhance(customtkinter.CTk):
             
             response_json = name_response.json()
 
-            print(len(response_json))
-
             if len(response_json) == 0:
                 self.fail_window = FailWindow(self)
                 self.fail_window.grab_set()
@@ -392,18 +411,21 @@ class WorkflowEnhance(customtkinter.CTk):
                 self.search_guids_button.configure(state="disabled", text="Load Workflow First")
                 self.export_state_button.configure(state="disabled", text="Load Workflow First")
                 self.upgrade_button.configure(state="disabled", text="Load Workflow First")
+                self.save_button.configure(state="disabled")
 
                 self.wf_name.configure(text="                        ")
                 self.title("Workflow_Ext")
             else:
                 step_names = response_json[self.workflowId]
                 self.workflow_name = step_names["WorkflowName"]
+                self.workflow_values = [f"{self.workflow_name} ({self.env})",self.workflowId,self.dataowner,self.env]
 
                 self.success_window = SuccessWindow(self)
                 self.success_window.grab_set()
 
                 self.search_guids_button.configure(state="normal", text="Search")
                 self.export_state_button.configure(state="normal", text="Export State")
+                self.save_button.configure(state="normal")
 
                 self.wf_name.configure(text=self.workflow_name)
                 self.title(f"Workflow_Ext -- {self.workflow_name} ({self.env})")
@@ -436,14 +458,19 @@ class WorkflowEnhance(customtkinter.CTk):
 
         self.table_created = False
 
-        if self.rowNum > 0:
-            self.delete_table()
+        # if self.rowNum > 0:
+        #     self.delete_table()
  
         self.guids_array = self.get_guids()
 
         self.progress_bar.set(0)
         
         self.search_guids_button.configure(state="disabled")
+
+        workers = int(self.search_entry.get())
+        self.progress_bar_label = customtkinter.CTkLabel(self.output_frame, text=f"Searching {len(self.guids_array)} items with {workers} workers."
+                , text_color="red", font=customtkinter.CTkFont(size=12),fg_color="transparent")
+        self.progress_bar_label.grid(row=3,column=0, pady=(4,19))
 
         self.progress_bar.start()
         self.api_thread = threading.Thread(target=self.getStatuses)
@@ -459,12 +486,25 @@ class WorkflowEnhance(customtkinter.CTk):
 
             self.rowNum = len(df_rows)
 
-            self.df_frame.tree_view = CTkTable(self.df_frame, row=self.rowNum, column=5, values=df_rows)
-            self.df_frame.tree_view.grid(row=0,column=0)
+            # self.df_frame.tree_view = CTkTable(self.df_frame, row=self.rowNum, column=5, values=df_rows)
+            # self.df_frame.tree_view.grid(row=0,column=0)
 
-            self.table = self.df_frame.tree_view
-            self.row_selector = CTkTableRowSelector(self.table)
+            # self.table = self.df_frame.tree_view
+            # self.row_selector = CTkTableRowSelector(self.table)
 
+            # if self.pt:
+            #     self.pt.destroy()
+
+            self.df_frame.tree_view = self.pt = Table(self.df_frame, dataframe=df, showtoolbar=False, showstatusbar=True, height=700)
+            self.pt.grid(row=0,column=0) 
+            self.pt.cellbackgr="gray"
+            self.pt.boxoutlinecolor="black"
+            self.pt.textcolor = 'white'
+            self.pt.editable=False
+            self.pt.rowselectedcolor="#4e57c1"
+            self.pt.colselectedcolor="#4e57c1"
+            self.pt.show()
+            
             self.search_guids_button.configure(state="normal")
             self.progress_bar.stop()
             self.progress_bar.set(1)
@@ -473,6 +513,8 @@ class WorkflowEnhance(customtkinter.CTk):
             self.filter_bar.status_select.configure(state="normal")
             self.filter_bar.version_select.configure(state="normal")
             self.filter_bar.remove_filters.configure(state="normal")
+            self.progress_bar_label.destroy()
+
 
             self.workflow_versions = df["Version"].unique()
 
@@ -480,6 +522,9 @@ class WorkflowEnhance(customtkinter.CTk):
 
     def getStatuses(self):
         start_time = time.time()
+        workers = int(self.search_entry.get())
+        print(f"Number of Workers: {workers}")
+
         def fetch_status(product):
             status_search_url = f"https://{self.env_url}/api/workflow/WorkflowGrain/status/{self.workflowId}/{product}"
             response = requests.get(status_search_url, headers=self.headers)
@@ -508,7 +553,9 @@ class WorkflowEnhance(customtkinter.CTk):
                     "Version": "Null"
                 }
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             results = list(executor.map(fetch_status, self.guids_array))
         
         end_time = time.time()  # Record the end time
@@ -517,6 +564,7 @@ class WorkflowEnhance(customtkinter.CTk):
         print(f"statuses retrieved in {elapsed_time:.2f} seconds")
 
         self.workflow_statuses = pd.DataFrame(results)
+        self.filtered_df = pd.DataFrame()
         self.workflow_versions = self.workflow_statuses["Version"].unique()
         self.after(0, self.create_table(self.workflow_statuses))
          
@@ -528,9 +576,6 @@ class WorkflowEnhance(customtkinter.CTk):
             "Connection" : "keep-alive",
             "Authorization" : self.auth
         }
-    
-    def test_var(self):
-        print(self.workflowId, self.dataowner, self.auth, self.env)
 
     def overwrite_warning(self):
         filename = self.csv_file_entry.get()
@@ -583,6 +628,14 @@ class WorkflowEnhance(customtkinter.CTk):
             self.search_first_window.ok_button = customtkinter.CTkButton(self.search_first_window, text="Ok", command=self.search_first_window.destroy)
             self.search_first_window.ok_button.grid(row=1, column=0, pady=(5,0))
         else:
+            workers = int(self.search_entry.get())
+            if self.filtered_df.empty:
+                current_df = self.workflow_statuses
+            else:
+                current_df = self.filtered_df
+            self.progress_bar_label = customtkinter.CTkLabel(self.output_frame, text=f"Upgrading {len(list(current_df['Product ID']))} items with {workers} workers."
+                , text_color="red", font=customtkinter.CTkFont(size=12),fg_color="transparent")
+            self.progress_bar_label.grid(row=3,column=0, pady=(8,23))
             self.progress_bar.set(0)
             self.progress_bar.start()
 
@@ -612,14 +665,20 @@ class WorkflowEnhance(customtkinter.CTk):
 
     def upgrade_items(self):
         start_time = time.time()  # Record the start time
+        workers = int(self.search_entry.get())
+        print(f"Number of Workers: {workers}")
 
         if self.filtered_df.empty:
             current_df = self.workflow_statuses
+            # print("Using Original DF")
         else:
             current_df = self.filtered_df
+            # print("Using filtered DF")
 
-        product_ids = current_df["Product ID"]
+        product_ids = list(current_df["Product ID"])
         instance_ids = current_df["Instance ID"]
+
+
         skip = "?skipApplyingStatuses=true"
         upgrade_url = f"https://{self.env_url}/api/workflow/Debug/upgrade/{self.workflowId}/"
 
@@ -630,8 +689,9 @@ class WorkflowEnhance(customtkinter.CTk):
         def process_upgrade(guid):
             instance_index = product_ids.index(guid)  # Get the index for the current GUID
             url = f"{upgrade_url}{instance_ids[instance_index]}/{guid}{skip}"
+           
             response = requests.get(url, headers=self.headers)
-
+            
             if response.status_code == 200:
                 success.append(True)
                 self.true_num += 1
@@ -640,8 +700,8 @@ class WorkflowEnhance(customtkinter.CTk):
                 self.false_num += 1
 
         # Use a ThreadPoolExecutor with a maximum of 20 workers
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-            executor.map(process_upgrade, product_ids)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as exec:
+            exec.map(process_upgrade, product_ids)
 
         end_time = time.time()  # Record the end time
         elapsed_time = end_time - start_time  # Calculate the elapsed time
@@ -668,13 +728,14 @@ class WorkflowEnhance(customtkinter.CTk):
         self.upgrade_window.ok_button.grid(row=0, column=1, padx=5, pady=5)
         self.upgrade_window.export_button = customtkinter.CTkButton(self.upgrade_window, text="Export", command =lambda: self.export_upgrades(self.upgrade_data,self.upgrade_window))
         self.upgrade_window.export_button.grid(row=1, column=1, padx=5, pady=5)
+        self.progress_bar_label.destroy()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
         
     def product_select(self):
         self.product_window = customtkinter.CTkToplevel(self)
-        self.product_window.geometry("350x550+500+500")
+        self.product_window.geometry("350x550+500+200")
         self.product_window.grid_columnconfigure(0, weight=1)
         self.product_window.grid_rowconfigure(1, weight=1)
         self.product_window.grid_rowconfigure((0,2), weight=0)
@@ -707,7 +768,6 @@ class WorkflowEnhance(customtkinter.CTk):
     def select_all(self, value_list):
         
         choice = self.product_window.select_all.get()
-        print(choice)
         
         x=0
         for i in value_list:
@@ -740,14 +800,14 @@ class WorkflowEnhance(customtkinter.CTk):
         self.filtered_df.reset_index(drop=True,inplace=True)
 
         self.table_created = False
-        self.table.destroy()
+        # self.table.destroy()
         self.create_table(self.filtered_df)
 
         return None
 
     def status_select(self):
         self.product_window = customtkinter.CTkToplevel(self)
-        self.product_window.geometry("350x550+500+500")
+        self.product_window.geometry("350x550+500+200")
         self.product_window.grid_columnconfigure(0, weight=1)
         self.product_window.grid_rowconfigure(1, weight=1)
         self.product_window.grid_rowconfigure((0,2), weight=0)
@@ -798,14 +858,14 @@ class WorkflowEnhance(customtkinter.CTk):
         self.filtered_df.reset_index(drop=True,inplace=True)
 
         self.table_created = False
-        self.table.destroy()
+        # self.table.destroy()
         self.create_table(self.filtered_df)
 
         return None
 
     def version_select(self):
         self.product_window = customtkinter.CTkToplevel(self)
-        self.product_window.geometry("180x300+500+500")
+        self.product_window.geometry("180x300+500+200")
         self.product_window.grid_columnconfigure(0, weight=1)
         self.product_window.grid_rowconfigure(1, weight=1)
         self.product_window.grid_rowconfigure((0,2), weight=0)
@@ -842,17 +902,16 @@ class WorkflowEnhance(customtkinter.CTk):
                 value = int(i.cget("text"))
                 to_filter.append(value)
 
-        print(to_filter)
         
         if self.filtered_df.empty:
             current_df = self.workflow_statuses
-            print("Using Original DF")
+            # print("Using Original DF")
         elif len(to_filter) < len(self.workflow_versions):
             current_df = self.filtered_df
-            print("Using filtered_df")
+            # print("Using filtered_df")
         else:
             current_df = self.workflow_statuses
-            print("Using Original DF")
+            # print("Using Original DF")
 
         self.filtered_df = current_df[current_df["Version"].isin(to_filter)]
         self.filtered_df.reset_index(drop=True,inplace=True)
@@ -860,7 +919,7 @@ class WorkflowEnhance(customtkinter.CTk):
         self.workflow_versions = to_filter
 
         self.table_created = False
-        self.table.destroy()
+        # self.table.destroy()
         self.create_table(self.filtered_df)
 
         return None
@@ -868,9 +927,63 @@ class WorkflowEnhance(customtkinter.CTk):
     def remove_filters(self):
         self.filtered_df = self.workflow_statuses
         self.table_created = False
-        self.table.destroy()
+        # self.table.destroy()
         self.create_table(self.workflow_statuses)
 
+    def save_workflow(self):
+
+        list_values= []
+
+        if not self.saved_workflows:
+            list_values = self.workflow_values
+            with open("saved_workflows.json", 'w') as json_file:
+                json.dump(list_values, json_file)
+            self.load_saved_workflows()
+        else:
+            list_values = self.saved_workflows
+            list_values.append(self.workflow_values)
+            with open("saved_workflows.json", 'w') as json_file:
+                json.dump(list_values, json_file)
+            self.load_saved_workflows()
+        
+        ok_pressed = CTkMessagebox(title="Workflow_ext", message="Workflow Saved!", icon="check", option_1="Ok")
+        response = ok_pressed.get()
+        if response== "Ok":
+            ok_pressed.destroy()
+
+    def load_saved_workflows(self):
+        try:
+            with open("saved_workflows.json", 'r') as json_file:
+                self.saved_workflows = json.load(json_file)
+        except FileNotFoundError:
+        # Handle the case where the file doesn't exist
+            print("The 'saved_workflows.json' file does not exist.")
+            self.saved_workflows = []  # You can initialize it as an empty list or handle it differently based on your needs
+        except Exception as e:
+            # Handle other potential exceptions
+            print(f"An error occurred: {str(e)}")
+            self.saved_workflows = []
+
+        if self.saved_workflows:
+            wf_labels = []
+            for i in self.saved_workflows:
+                wf_labels.append(i[0])
+            self.workflow_selector.configure(values=wf_labels)
+            self.workflow_selector.set("--saved workflows--")
+
+    def load_workflow(self,x):
+        print(x)
+        if self.workflow_selector.get() == "--saved workflows--":
+            return None
+        else:
+            for i in self.saved_workflows:
+                if i[0]==self.workflow_selector.get():
+                    self.workflow_id.delete(0,last_index=50)
+                    self.workflow_id.insert(0,i[1])
+                    self.workflow_dataowner.delete(0,last_index=50)
+                    self.workflow_dataowner.insert(0,i[2])
+                    self.environment_selector.set(i[3])
+                    break
 
 if __name__ == "__main__":
     app = WorkflowEnhance()
