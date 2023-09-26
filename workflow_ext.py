@@ -1,29 +1,18 @@
 import customtkinter
 import pandas as pd
-# import CTkTable
-# from CTkTable import *
 import requests
 import json
 import os
 import threading
 import concurrent.futures
 import time
-from pandastable import Table
+from pandastable import Table, config
 from CTkMessagebox import CTkMessagebox
+from tkinter import *
 
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("dark-blue")  # Themes: "blue" (standard), "green", "dark-blue"
-
-
-class OutputFrame(customtkinter.CTkScrollableFrame):
-    def __init__(self, master, **kwargs):
-        super().__init__(master, **kwargs)
-    
-        columns = [["Product ID", "Updated", "Status", "Instance ID", "Version"]]
-
-        # self.tree_view = CTkTable(self, row=1 , column=5, values=columns)
-        # self.tree_view.grid(row=0,column=0)
 
 class SuccessWindow(customtkinter.CTkToplevel):
     def __init__(self, *args, **kwargs):
@@ -98,8 +87,9 @@ class WorkflowEnhance(customtkinter.CTk):
         self.guids_array = []
         self.api_thread = None
         self.table_created = False
-        self.table_creation_lock = threading.Lock()
+        self.table_present = False
         self.upgrade_data = {}
+        self.restart_data = {}
         self.true_num = 0
         self.false_num = 0
         self.table = None
@@ -108,6 +98,8 @@ class WorkflowEnhance(customtkinter.CTk):
         self.pt = None
         self.workflow_values = []
         self.saved_workflows = []
+        self.elapsed_time = None
+        self.num_items = int
 
         # configure window
         self.title("Workflow_Ext")
@@ -228,14 +220,12 @@ class WorkflowEnhance(customtkinter.CTk):
         self.search_guids_button = customtkinter.CTkButton(self.search_frame, text="Load Workflow First", command=self.search_clicked, state="disabled")
         self.search_guids_button.grid(row=0, column=0, padx=20, pady=15)
 
-        self.search_entry = customtkinter.CTkEntry(self.search_frame, width=30)
+        self.search_entry = customtkinter.CTkEntry(self.search_frame, width=40)
         self.search_entry.grid(row=0, column=1,padx=5)
         self.search_entry.insert(0,20)
 
         # row 2
-        self.upgrade_button = customtkinter.CTkButton(self.product_guids_frame, text="Search Items First", command=self.start_upgrade, state="disabled")
-        self.upgrade_button.grid(row=2, column=0, padx=20, pady=(0,15))
-
+        
     def create_output_widgets(self):
 
         ### output Frame
@@ -252,12 +242,12 @@ class WorkflowEnhance(customtkinter.CTk):
 
 
         self.filter_bar = customtkinter.CTkFrame(self.output_frame,width=500)
-        self.filter_bar.grid(row=1,column=0,pady=5)
+        self.filter_bar.grid(row=1,column=0,pady=5, padx=10)
         self.filter_bar.grid_columnconfigure((0,1,2,3,4), weight=1)
         self.filter_bar.grid_rowconfigure(0,weight=1)
 
         self.filter_bar.filter_bar_label = customtkinter.CTkLabel(self.filter_bar, text="Apply Filters:")
-        self.filter_bar.filter_bar_label.grid(row=0, column=0, padx=10)
+        self.filter_bar.filter_bar_label.grid(row=0, column=0, padx=15)
 
         self.filter_bar.product_select = customtkinter.CTkButton(self.filter_bar, text = "Product Select",corner_radius=0, command=self.product_select, state="disabled")
         self.filter_bar.product_select.grid(row=0, column=1, padx=1)
@@ -272,14 +262,18 @@ class WorkflowEnhance(customtkinter.CTk):
         self.filter_bar.remove_filters.grid(row=0,column=4, padx=2)
         
 
-        self.df_frame = OutputFrame(self.output_frame)
+        self.df_frame = customtkinter.CTkScrollableFrame(self.output_frame)
         self.df_frame.grid(row=2, column=0, padx =15, pady = (10,15), sticky="nsew")
-        # self.df_frame.grid_columnconfigure(0, weight = 1)
-        self.df_frame.grid_rowconfigure(0,weigh=1)
+        # self.df_frame.grid_columnconfigure(0, weight=1)
+        # # self.df_frame.grid_columnconfigure(0, weight=0)
+        # self.df_frame.grid_rowconfigure(0,weight=1)
 
         self.progress_bar = customtkinter.CTkProgressBar(self.output_frame, height=10, width=500, indeterminate_speed=2)
-        self.progress_bar.grid(row=3, column=0, pady=(10,25))
+        self.progress_bar.grid(row=3, column=0, pady=(5,0))
         self.progress_bar.set(0)
+
+        self.progress_bar_label = customtkinter.CTkLabel(self.output_frame, text="", text_color="lightgreen", font=customtkinter.CTkFont(size=10),fg_color="transparent")
+        self.progress_bar_label.grid(row=4,column=0, pady=(0,5))
 
     def create_additional_actions_widgets(self):
         ### additional actions
@@ -287,7 +281,7 @@ class WorkflowEnhance(customtkinter.CTk):
         self.additional_actions_frame = customtkinter.CTkFrame(self, corner_radius=10)
         self.additional_actions_frame.grid(row=0, column=3, rowspan=10, padx = 10, pady = 10, sticky="nsew")
         self.additional_actions_frame.grid_columnconfigure(0, weight=1)
-        self.additional_actions_frame.grid_rowconfigure(5, weight=1)
+        self.additional_actions_frame.grid_rowconfigure(7, weight=1)
 
         ## additional rows
 
@@ -303,14 +297,20 @@ class WorkflowEnhance(customtkinter.CTk):
         self.output_to_csv_button = customtkinter.CTkButton(self.additional_actions_frame, text="Export to CSV", command=self.overwrite_warning, state="disabled")
         self.output_to_csv_button.grid(row=3, column=0, pady=(20,15))
 
+        self.upgrade_button = customtkinter.CTkButton(self.additional_actions_frame, text="Search Items First", command=self.start_upgrade, state="disabled")
+        self.upgrade_button.grid(row=4, column=0, padx=20, pady=(0,15))
+
+        self.restart_button = customtkinter.CTkButton(self.additional_actions_frame, text="Search Items First", command=self.start_restart, state="disabled")
+        self.restart_button.grid(row=5, column=0, padx=20, pady=(0,15))
+
         self.instance_id_label = customtkinter.CTkLabel(self.additional_actions_frame, text="Instance IDs:", anchor="w")
-        self.instance_id_label.grid(row=4, column=0, padx=20, pady=10)
+        self.instance_id_label.grid(row=6, column=0, padx=20, pady=10)
 
         self.instance_id_textbox = customtkinter.CTkTextbox(self.additional_actions_frame)
-        self.instance_id_textbox.grid(row=5, column=0,padx=10, pady=(0,5), sticky="nsew")
+        self.instance_id_textbox.grid(row=7, column=0,padx=10, pady=(0,5), sticky="nsew")
 
         self.export_state_button = customtkinter.CTkButton(self.additional_actions_frame, text="Load Workflow First", command=self.export_state, state="disabled")
-        self.export_state_button.grid(row=6, column=0, pady=(10,15))
+        self.export_state_button.grid(row=8, column=0, pady=(10,15))
 
     def export_state(self):
 
@@ -468,9 +468,7 @@ class WorkflowEnhance(customtkinter.CTk):
         self.search_guids_button.configure(state="disabled")
 
         workers = int(self.search_entry.get())
-        self.progress_bar_label = customtkinter.CTkLabel(self.output_frame, text=f"Searching {len(self.guids_array)} items with {workers} workers."
-                , text_color="red", font=customtkinter.CTkFont(size=12),fg_color="transparent")
-        self.progress_bar_label.grid(row=3,column=0, pady=(4,19))
+        self.progress_bar_label.configure(text=f"Searching {len(self.guids_array)} items with {workers} workers.")
 
         self.progress_bar.start()
         self.api_thread = threading.Thread(target=self.getStatuses)
@@ -486,39 +484,41 @@ class WorkflowEnhance(customtkinter.CTk):
 
             self.rowNum = len(df_rows)
 
-            # self.df_frame.tree_view = CTkTable(self.df_frame, row=self.rowNum, column=5, values=df_rows)
-            # self.df_frame.tree_view.grid(row=0,column=0)
-
-            # self.table = self.df_frame.tree_view
-            # self.row_selector = CTkTableRowSelector(self.table)
-
-            # if self.pt:
-            #     self.pt.destroy()
-
-            self.df_frame.tree_view = self.pt = Table(self.df_frame, dataframe=df, showtoolbar=False, showstatusbar=True, height=700)
-            self.pt.grid(row=0,column=0) 
-            self.pt.cellbackgr="gray"
+            if self.table_present == True:
+                self.pt.remove()
+                self.df_frame = customtkinter.CTkScrollableFrame(self.output_frame)
+                self.df_frame.grid(row=2, column=0, padx =15, pady = (10,15), sticky="nsew")
+            
+            self.df_frame.tree_view = self.pt = Table(parent=self.df_frame, dataframe=df, showtoolbar=False, showstatusbar=True, height=550)
+            self.df_frame.tree_view.grid(row=0,column=0,sticky="nsew")
             self.pt.boxoutlinecolor="black"
             self.pt.textcolor = 'white'
             self.pt.editable=False
             self.pt.rowselectedcolor="#4e57c1"
             self.pt.colselectedcolor="#4e57c1"
+            options = {'fontsize':10,'cellbackgr': 'gray' }
+            config.apply_options(options,self.pt)
             self.pt.show()
             
             self.search_guids_button.configure(state="normal")
             self.progress_bar.stop()
             self.progress_bar.set(1)
-            self.upgrade_button.configure(state="normal", text="Upgrade Items in Table")
+            self.upgrade_button.configure(state="normal", text="Upgrade Items")
+            self.restart_button.configure(state="normal", text="Restart Items")
             self.filter_bar.product_select.configure(state="normal")
             self.filter_bar.status_select.configure(state="normal")
             self.filter_bar.version_select.configure(state="normal")
             self.filter_bar.remove_filters.configure(state="normal")
-            self.progress_bar_label.destroy()
-
+            if self.num_items:
+                self.progress_bar_label.configure(text=self.status_message)
+                self.num_items = None
+            else:
+                self.progress_bar_label.configure(text="filter applied")
 
             self.workflow_versions = df["Version"].unique()
 
             self.table_created = True
+            self.table_present = True
 
     def getStatuses(self):
         start_time = time.time()
@@ -554,15 +554,15 @@ class WorkflowEnhance(customtkinter.CTk):
                 }
 
         
-
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
             results = list(executor.map(fetch_status, self.guids_array))
         
         end_time = time.time()  # Record the end time
-        elapsed_time = end_time - start_time  # Calculate the elapsed time
+        self.elapsed_time = end_time - start_time  # Calculate the elapsed time
 
-        print(f"statuses retrieved in {elapsed_time:.2f} seconds")
+        self.status_message=f"statuses retrieved in {self.elapsed_time:.2f} seconds"
 
+        self.num_items = len(self.guids_array)
         self.workflow_statuses = pd.DataFrame(results)
         self.filtered_df = pd.DataFrame()
         self.workflow_versions = self.workflow_statuses["Version"].unique()
@@ -611,6 +611,7 @@ class WorkflowEnhance(customtkinter.CTk):
     def start_upgrade(self):
 
         self.upgrade_button.configure(state="disabled")
+        self.search_guids_button.configure(state="disabled")
         
         productIds = self.get_guids()
 
@@ -633,9 +634,7 @@ class WorkflowEnhance(customtkinter.CTk):
                 current_df = self.workflow_statuses
             else:
                 current_df = self.filtered_df
-            self.progress_bar_label = customtkinter.CTkLabel(self.output_frame, text=f"Upgrading {len(list(current_df['Product ID']))} items with {workers} workers."
-                , text_color="red", font=customtkinter.CTkFont(size=12),fg_color="transparent")
-            self.progress_bar_label.grid(row=3,column=0, pady=(8,23))
+            self.progress_bar_label.configure(text=f"Upgrading {len(list(current_df['Product ID']))} items with {workers} workers.")
             self.progress_bar.set(0)
             self.progress_bar.start()
 
@@ -676,6 +675,7 @@ class WorkflowEnhance(customtkinter.CTk):
             # print("Using filtered DF")
 
         product_ids = list(current_df["Product ID"])
+        self.num_items = len(product_ids)
         instance_ids = current_df["Instance ID"]
 
 
@@ -710,14 +710,19 @@ class WorkflowEnhance(customtkinter.CTk):
             "Product GUIDs": product_ids,
             "Success": success
         }
-        print(f"Upgrade completed in {elapsed_time:.2f} seconds")
+        self.status_message= f"Upgrade completed in {elapsed_time:.2f} seconds"
 
         self.after(0, self.upgrade_output)
 
     def upgrade_output(self):
         self.progress_bar.set(1)
         self.progress_bar.stop()
+
+        self.search_guids_button.configure(state="normal")
         self.upgrade_button.configure(state="normal")
+
+        self.progress_bar_label.configure(text=self.status_message)
+
         self.upgrade_window = UpgradeWindow(self)
         self.upgrade_window.grab_set()
         self.upgrade_window.output_label = customtkinter.CTkLabel(self.upgrade_window, text=f"{self.true_num} items upgraded")
@@ -728,7 +733,6 @@ class WorkflowEnhance(customtkinter.CTk):
         self.upgrade_window.ok_button.grid(row=0, column=1, padx=5, pady=5)
         self.upgrade_window.export_button = customtkinter.CTkButton(self.upgrade_window, text="Export", command =lambda: self.export_upgrades(self.upgrade_data,self.upgrade_window))
         self.upgrade_window.export_button.grid(row=1, column=1, padx=5, pady=5)
-        self.progress_bar_label.destroy()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -756,14 +760,16 @@ class WorkflowEnhance(customtkinter.CTk):
         for i in current_df["Product ID"]:
             self.product_window.products_frame.i = customtkinter.CTkCheckBox(self.product_window.products_frame, text=f"{i}")
             self.product_window.products_frame.i.grid(row=ind, column=0, pady=5, padx=(5,0), sticky="w")
+            self.product_window.products_frame.i.select()
             checkboxes.append(self.product_window.products_frame.i)
             ind += 1
             
-        self.product_window.ok_button = customtkinter.CTkButton(self.product_window, text ="Filter", command=lambda: self.filter_products(checkboxes))
+        self.product_window.ok_button = customtkinter.CTkButton(self.product_window, text ="Filter", command=lambda: [self.filter_products(checkboxes),self.product_window.destroy()])
         self.product_window.ok_button.grid(row=2, column=0, pady=15)
 
         self.product_window.select_all = customtkinter.CTkCheckBox(self.product_window, text="Select All", command=lambda: self.select_all(checkboxes))
         self.product_window.select_all.grid(row=0,column=0,pady=(20,5))
+        self.product_window.select_all.select()
 
     def select_all(self, value_list):
         
@@ -829,7 +835,7 @@ class WorkflowEnhance(customtkinter.CTk):
             checkboxes.append(self.product_window.products_frame.i)
             ind += 1
 
-        self.product_window.ok_button = customtkinter.CTkButton(self.product_window, text ="Filter", command=lambda: self.filter_status(checkboxes))
+        self.product_window.ok_button = customtkinter.CTkButton(self.product_window, text ="Filter", command=lambda: [self.filter_status(checkboxes),self.product_window.destroy()])
         self.product_window.ok_button.grid(row=2, column=0, pady=15)
 
         self.product_window.select_all = customtkinter.CTkCheckBox(self.product_window, text="Select All", command=lambda: self.select_all(checkboxes))
@@ -887,7 +893,7 @@ class WorkflowEnhance(customtkinter.CTk):
             checkboxes.append(self.product_window.products_frame.i)
             ind += 1
 
-        self.product_window.ok_button = customtkinter.CTkButton(self.product_window, text ="Filter", command=lambda: self.filter_version(checkboxes))
+        self.product_window.ok_button = customtkinter.CTkButton(self.product_window, text ="Filter", command=lambda: [self.filter_version(checkboxes),self.product_window.destroy()])
         self.product_window.ok_button.grid(row=2, column=0, pady=15)
 
         self.product_window.select_all = customtkinter.CTkCheckBox(self.product_window, text="Select All", command=lambda: self.select_all(checkboxes))
@@ -906,12 +912,9 @@ class WorkflowEnhance(customtkinter.CTk):
         if self.filtered_df.empty:
             current_df = self.workflow_statuses
             # print("Using Original DF")
-        elif len(to_filter) < len(self.workflow_versions):
+        else:
             current_df = self.filtered_df
             # print("Using filtered_df")
-        else:
-            current_df = self.workflow_statuses
-            # print("Using Original DF")
 
         self.filtered_df = current_df[current_df["Version"].isin(to_filter)]
         self.filtered_df.reset_index(drop=True,inplace=True)
@@ -984,6 +987,131 @@ class WorkflowEnhance(customtkinter.CTk):
                     self.workflow_dataowner.insert(0,i[2])
                     self.environment_selector.set(i[3])
                     break
+
+    def start_restart(self):
+
+        self.restart_button.configure(state="disabled")
+        self.search_guids_button.configure(state="disabled")
+        
+        productIds = self.get_guids()
+
+        if self.guids_array != productIds:
+            self.search_first_window = customtkinter.CTkToplevel(self)
+            self.search_first_window.geometry("400x200")
+            self.search_first_window.grid_columnconfigure(0, weight=1)
+            self.search_first_window.grid_rowconfigure((0,1), weight=1)
+            self.search_first_window.title("Workflow_Ext")
+            self.search_first_window.grab_set()
+
+            self.search_first_window.warn_label = customtkinter.CTkLabel(self.search_first_window, text="Product GUIDs have changed. Search to load statuses.")
+            self.search_first_window.warn_label.grid(row=0, column=0, pady=(0,5))
+
+            self.search_first_window.ok_button = customtkinter.CTkButton(self.search_first_window, text="Ok", command=self.search_first_window.destroy)
+            self.search_first_window.ok_button.grid(row=1, column=0, pady=(5,0))
+        else:
+            workers = int(self.search_entry.get())
+            if self.filtered_df.empty:
+                current_df = self.workflow_statuses
+            else:
+                current_df = self.filtered_df
+            self.progress_bar_label.configure(text=f"Restarting {len(list(current_df['Product ID']))} items with {workers} workers.")
+            self.progress_bar.set(0)
+            self.progress_bar.start()
+
+            restart_thread = threading.Thread(target=self.restart_items)
+            restart_thread.start()    
+
+    def restart_items(self):
+        start_time = time.time()  # Record the start time
+        workers = int(self.search_entry.get())
+        print(f"Number of Workers: {workers}")
+
+        if self.filtered_df.empty:
+            current_df = self.workflow_statuses
+            # print("Using Original DF")
+        else:
+            current_df = self.filtered_df
+            # print("Using filtered DF")
+
+        product_ids = list(current_df["Product ID"])
+        self.num_items = len(product_ids)
+        instance_ids = current_df["Instance ID"]
+
+        upgrade_url = f"https://{self.env_url}/api/workflow/Debug/restart/{self.workflowId}/"
+
+        success = []
+        self.true_num = 0
+        self.false_num = 0
+
+        def process_restart(guid):
+            instance_index = product_ids.index(guid)  # Get the index for the current GUID
+            url = f"{upgrade_url}{instance_ids[instance_index]}/{guid}"
+           
+            response = requests.get(url, headers=self.headers)
+            
+            if response.status_code == 200:
+                success.append(True)
+                new_instance_id = response.json()  # Replace with the actual response attribute
+                current_df.at[instance_index, "Instance ID"] = new_instance_id
+                self.true_num += 1
+            else:
+                success.append(False)
+                self.false_num += 1
+
+        # Use a ThreadPoolExecutor with a maximum of 20 workers
+        with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as exec:
+            exec.map(process_restart, product_ids)
+
+        end_time = time.time()  # Record the end time
+        elapsed_time = end_time - start_time  # Calculate the elapsed time
+
+        self.restart_data = {
+            "Product GUIDs": product_ids,
+            "Success": success
+        }
+        print(f"Upgrade completed in {elapsed_time:.2f} seconds. {self.true_num} items")
+        self.status_message= f"Restart completed in {elapsed_time:.2f} seconds"
+        self.filtered_df = current_df
+
+        self.after(0, self.restart_output)
+    
+    def restart_output(self):
+        self.progress_bar.set(1)
+        self.progress_bar.stop()
+        self.restart_button.configure(state="normal")
+        self.restart_window = customtkinter.CTkToplevel(self)
+        self.restart_window.geometry("400x150+500+500")
+
+        #update table
+        self.progress_bar_label.configure(text=self.status_message)
+        self.search_guids_button.configure(state="normal")
+        print("re-creating table")
+        self.table_created = False
+        self.create_table(self.filtered_df)
+
+        #open results window
+        self.restart_window.grid_columnconfigure((0,1), weight=1)
+        self.restart_window.grid_rowconfigure((0,1), weight=1)
+        self.restart_window.grab_set()
+        self.restart_window.output_label = customtkinter.CTkLabel(self.restart_window, text=f"{self.true_num} items restarted")
+        self.restart_window.output_label.grid(row=0, column=0, padx=5, pady=5)
+        self.restart_window.output_label2 = customtkinter.CTkLabel(self.restart_window, text=f"{self.false_num} items failed to restart")
+        self.restart_window.output_label2.grid(row=1, column=0, padx=5, pady=5)
+        self.restart_window.ok_button = customtkinter.CTkButton(self.restart_window, text="Ok", command = self.restart_window.destroy)
+        self.restart_window.ok_button.grid(row=0, column=1, padx=5, pady=5)
+        self.restart_window.export_button = customtkinter.CTkButton(self.restart_window, text="Export", command =lambda: self.export_restarts(self.restart_data,self.restart_window))
+        self.restart_window.export_button.grid(row=1, column=1, padx=5, pady=5)
+
+    def export_restarts(self, data, restart_window):
+        restart_window.destroy()
+
+        df = pd.DataFrame(data)
+        df.to_csv("../../restart_results.csv", index=False)
+
+        self.output_window = OutputWindow(self)
+        self.output_window.grab_set()
+        self.output_window.output_label = customtkinter.CTkLabel(self.output_window, text=f"Results saved to restart_results.csv")
+        self.output_window.output_label.grid(row=0, column=0, pady=15)
 
 if __name__ == "__main__":
     app = WorkflowEnhance()
