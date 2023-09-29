@@ -70,6 +70,450 @@ class UpgradeWindow(customtkinter.CTkToplevel):
         self.grid_columnconfigure((0,1), weight=1)
         self.grid_rowconfigure((0,1), weight=1)
 
+class ProductSearchWindow(customtkinter.CTkToplevel):
+    def __init__(self):
+        super().__init__()
+        self.title("Workflow_Ext - Product Search")
+        self.geometry("1200x800+120+120")
+        self.grid_columnconfigure((1), weight=1)
+        self.grid_rowconfigure((0), weight=1)
+
+        self.steps = app.steps_with_names
+        self.auth = app.auth
+        self.dataowner = app.dataowner
+        self.checkboxes = []
+        self.workflowId = app.workflowId
+        self.workflowName = app.workflow_name
+        self.headers = {
+            "Content-Type":"application/json", 
+            "Cache-Control": "no-cache", 
+            "User-Agent": "PostmanRuntime/y.32.3", 
+            "Accept": "*/*", 
+            "Accept-Encoding": 
+            "gzip,deflate,br" , 
+            "Connection" : "keep-alive",
+            "Authorization": self.auth
+            }
+        self.num_results= 0
+        self.row_index= 0
+        self.selected_statuses = []
+        self.selected_attributes = []
+        self.exists_attribute = []
+        self.results_df = pd.DataFrame()
+        self.has_table = False
+        self.upgrade_thread = None
+        self.stop_event = threading.Event()
+        self.progress_bar = None
+
+        self.create_filter_section()
+        # self.add_status_select()
+        self.create_output_frame()
+        # self.grab_set()    
+
+    def create_filter_section(self):
+        self.filter_bar = customtkinter.CTkFrame(self)
+        self.filter_bar.grid(row=0,column=0, padx=15,pady=(15,10), stick="nsew")
+        self.filter_bar.grid_rowconfigure(3,weight=1)
+
+        self.wf_frame = customtkinter.CTkFrame(self.filter_bar, height = 40, border_color="gray", border_width=2)
+        self.wf_frame.grid(row=0, column=0, padx=10, pady=10,sticky="nsew")
+        self.wf_frame.grid_columnconfigure(0, weight=1)
+
+        self.wf_name = customtkinter.CTkLabel(self.wf_frame, text=self.workflowName,font=customtkinter.CTkFont(size=14, weight="bold"))
+        self.wf_name.grid(row=0, column=0, pady=5, padx=15)
+
+        self.filter_select_label = customtkinter.CTkLabel(self.filter_bar, text="Select Filters:")
+        self.filter_select_label.grid(row=1, column=0, padx=10, pady=(8,0))
+
+        self.filter_select = customtkinter.CTkFrame(self.filter_bar)
+        self.filter_select.grid(row=2,column=0, padx=10,pady=(5,10), sticky="ew")
+        self.filter_select.grid_columnconfigure(0,weight=1)
+
+        self.status_checkbox = customtkinter.CTkButton(self.filter_select, text="Workflow Status", command=self.add_status_select)
+        self.status_checkbox.grid(row=0,column=0,pady=5)
+
+        self.attribute_checkbox = customtkinter.CTkButton(self.filter_select, text="Identifier by Value(s)", command=self.add_identifier_search_by_value)
+        self.attribute_checkbox.grid(row=1,column=0,pady=5)
+
+        self.attribute_contains_checkbox = customtkinter.CTkButton(self.filter_select, text="Contains Identifier", command=self.add_identifier_contains)
+        self.attribute_contains_checkbox.grid(row=2,column=0,pady=5)
+
+        self.filter_box = customtkinter.CTkScrollableFrame(self.filter_bar)
+        self.filter_box.grid(row=3, column=0, padx=10, pady=5, sticky="nsew")
+        self.filter_box.grid_columnconfigure(0, weight=1)
+
+        self.search_button = customtkinter.CTkButton(self.filter_bar, text="Search", command= self.search_products)
+        self.search_button.grid(row=4, column=0, padx=10, pady=10, sticky="nsew")
+   
+    def add_status_select(self):
+        to_filter = []
+        status_ids = []
+
+        def close_window():
+            self.selected_statuses = [value for value in self.selected_statuses if value not in status_ids]
+            self.status_select_frame.destroy()
+
+        def save_values(checkboxes): 
+            for i in checkboxes:
+                if i.get() == 1:
+                    value = i.cget("text")
+                    to_filter.append(value)
+            for key, value in self.steps.items():
+                if value in to_filter and key not in self.selected_statuses:
+                    status_ids.append(key)
+                    self.selected_statuses.append(key)
+            self.save_button.configure(state="disabled")
+            ok_pressed = CTkMessagebox(title="Workflow_ext", message="Choices Saved", icon="check", option_1="Ok")
+            response = ok_pressed.get()
+            if response== "Ok":
+                ok_pressed.destroy()
+
+
+        self.status_select_frame = customtkinter.CTkFrame(self.filter_box)
+        self.status_select_frame.grid(row=self.row_index, column=0, padx=5, pady=2)
+        self.status_select_frame.grid_columnconfigure(0,weight=1)
+
+        self.label_frame = customtkinter.CTkFrame(self.status_select_frame, fg_color="transparent")
+        self.label_frame.grid(row=0,column=0, sticky="ew")
+        self.label_frame.grid_columnconfigure(1,weight=1)
+
+        self.status_label = customtkinter.CTkLabel(self.label_frame, text="Select Statuses: ")
+        self.status_label.grid(row=0,column=0, padx=10,pady=(8,0), sticky="w")
+
+        self.close_button = customtkinter.CTkButton(self.label_frame, text="X", command=lambda: close_window(), width=15,height=15, anchor="e")
+        self.close_button.grid(row=0, column=2, padx=5,pady=2, sticky="e")
+
+        self.status_select = customtkinter.CTkScrollableFrame(self.status_select_frame)
+        self.status_select.grid(row=1,column=0, padx=10,pady=(5,10))
+        self.status_select.grid_columnconfigure(0, weight=1)
+
+        self.save_button = customtkinter.CTkButton(self.status_select_frame, text="Save Choices", command=lambda: save_values(self.checkboxes))
+        self.save_button.grid(row=2, column=0, pady=(0,10), padx=10, sticky="ew")
+
+        self.row_index += 1
+        self.getStatuses(self.status_select)
+    
+    def create_output_frame(self):
+        
+        self.results_frame = customtkinter.CTkFrame(self,fg_color="transparent")
+        self.results_frame.grid(row=0,column=1, sticky="nsew")
+        self.results_frame.grid_columnconfigure(0, weight=1)
+        self.results_frame.grid_rowconfigure(0, weight=1)
+        
+        self.output_frame = customtkinter.CTkScrollableFrame(self.results_frame)
+        self.output_frame.grid(row=0, column=0, padx=(0,10), pady=(15,10), sticky= "nsew")
+
+        self.actions_frame = customtkinter.CTkFrame(self.results_frame)
+        self.actions_frame.grid(row=1, column=0, padx=(0,10), pady=(0,10))
+        self.actions_frame.grid_rowconfigure(0, weight=1)
+        self.actions_frame.grid_columnconfigure((0,1,2,3,4,5), weight=1)
+        
+        self.filename_label = customtkinter.CTkLabel(self.actions_frame, text="Filename:", anchor="e")
+        self.filename_label.grid(row=0, column=0, padx=(10,0), pady=10, sticky="e")
+
+        self.export_filename_entry = customtkinter.CTkEntry(self.actions_frame, width=100)
+        self.export_filename_entry.grid(row=0, column=1, padx=(2,2), pady=10)
+        self.export_filename_entry.insert(0,"output.csv")
+
+        self.export_to_csv_button = customtkinter.CTkButton(self.actions_frame, text="Export to CSV", state="disabled",
+            command=lambda: app.export_to_csv(self.export_filename_entry.get(), self.results_df))
+        self.export_to_csv_button.grid(row=0, column=2, padx=(3,10), pady=10)
+
+        self.multiplyer_label = customtkinter.CTkLabel(self.actions_frame, text="Multiplier:")
+        self.multiplyer_label.grid(row=0,column=3,padx=(10,0), pady=10, sticky="e")
+
+        self.multiplyer_entry = customtkinter.CTkEntry(self.actions_frame, width=40)
+        self.multiplyer_entry.grid(row=0,column=4,padx=(2,0),pady=10)
+        self.multiplyer_entry.insert(0,"20")
+
+        self.upgrade_button = customtkinter.CTkButton(self.actions_frame, text="Upgrade Items", state="disabled",
+            command=self.start_upgrade)
+        self.upgrade_button.grid(row=0, column=5, padx=5, pady=10)
+
+        self.restart_button = customtkinter.CTkButton(self.actions_frame, text="Restart Items", state="disabled",
+            command=self.start_restart)
+        self.restart_button.grid(row=0, column=6, padx=(0,10), pady=10)
+
+        self.loading_frame = customtkinter.CTkFrame(self.results_frame)
+        self.loading_frame.grid(row=2, column=0, padx=(0,10), pady=(0,10), sticky="ew")
+        self.loading_frame.grid_columnconfigure(0, weight=1)
+
+        self.progress_bar = customtkinter.CTkProgressBar(self.loading_frame)
+        self.progress_bar.grid(row=0, column=0, padx=20, pady=10, sticky="ew")
+        self.progress_bar.set(0)
+
+    def getStatuses(self, window):
+        statuses = list(self.steps.values())
+        self.checkboxes = []
+
+        ind=0
+
+        for i in statuses:
+            self.status_select.i = customtkinter.CTkCheckBox(window, text=f"{i}")
+            self.status_select.i.grid(row=ind,column=0,pady=5, sticky="w")
+            self.checkboxes.append(self.status_select.i)
+            ind += 1
+    
+    def search_products(self):
+        false= "false"
+        body = {
+                "TargetPartyId": "47f66d9f-9429-48ad-8f2a-267dcd67a346",
+                "OrderBy": "0994d0f8-35e7-4a6d-9cd9-2ae97cd8b993",
+                "AttributeFilterOperator": "And",
+                "WorkflowFilters": [
+                    {
+                        "WorkflowId": self.workflowId,
+                        "Statuses": self.selected_statuses
+                    }
+                ],
+                "AttributeExistsFilters": self.exists_attribute,
+                "AttributeFilters": self.selected_attributes,
+                "Archived": false,
+                "DataOwner": self.dataowner,
+                "Language": "en-US"
+            }
+
+        api_url = "https://api.syndigo.com/ui/product?includeMetadata=false&includeWorkflowData=true&skip=0&take=1"
+        response = requests.post(api_url, data=json.dumps(body), headers=self.headers)
+        # print(json.dumps(body))
+        if response.status_code == 200:
+            print("200 OK")
+            json_response= response.json()
+            self.num_results= json_response["TotalHitCount"]
+            print(self.num_results)
+            ok_pressed = CTkMessagebox(title="Workflow_ext", message=f"{self.num_results} results returned. Do you want to continue loading the results? (5k Max)", icon="warning", option_1="Yes", option_2="No")
+            response = ok_pressed.get()
+            if response== "Yes":
+                self.search_button.configure(state="disabled")
+                self.progress_bar.set(0)
+                self.progress_bar.start()
+                load_results_thread = threading.Thread(target=self.load_results)
+                load_results_thread.start()
+                ok_pressed.destroy()
+            else:
+                ok_pressed.destroy()
+
+        else:
+            ok_pressed = CTkMessagebox(title="Workflow_ext", message=f"No results returned!", icon="cancel", option_1="OK")
+            response = ok_pressed.get()
+            if response== "OK":
+                ok_pressed.destroy()
+        
+    def load_results(self):
+        results_list = []
+        false= "false"
+        body = {
+                "TargetPartyId": "47f66d9f-9429-48ad-8f2a-267dcd67a346",
+                "OrderBy": "0994d0f8-35e7-4a6d-9cd9-2ae97cd8b993",
+                "AttributeFilterOperator": "And",
+                "WorkflowFilters": [
+                    {
+                        "WorkflowId": self.workflowId,
+                        "Statuses": self.selected_statuses
+                    }
+                ],
+                "AttributeExistsFilters": self.exists_attribute,
+                "AttributeFilters": self.selected_attributes,
+                "Archived": false,
+                "DataOwner": self.dataowner,
+                "Language": "en-US"
+            }
+        api_url = "https://api.syndigo.com/ui/product?includeMetadata=false&includeWorkflowData=true"
+        skip = f"&skip=0&take={self.num_results}"
+        response = requests.post(api_url+skip, data=json.dumps(body), headers=self.headers)
+        json_response = response.json()
+        results =json_response["Results"]
+        for result in results:
+            workflowData = result["WorkflowStatusData"]
+
+            
+            correct_wf = {}
+            for i in workflowData:
+                if i["WorkflowDefinitionId"] == self.workflowId:
+                    correct_wf = i
+            components = result["Components"][0]["AttributeValues"]["en-US"]
+            status_response = correct_wf["Statuses"]
+            stat_names = [self.steps.get(status, status) for status in status_response]
+            stat_names_str = ", ".join(stat_names)
+            gtin = str
+            for  x in components:
+                if x["AttributeId"]=="0994d0f8-35e7-4a6d-9cd9-2ae97cd8b993":
+                    gtin = x["Value"]
+
+            dict = {
+                "GTIN": gtin,
+                "Product ID": result["id"],
+                "Status": stat_names_str,
+                "Instance ID": correct_wf["WorkflowInstanceId"],
+                "Version": correct_wf["WorkflowVersion"]
+            }
+
+            results_list.append(dict)
+        df = pd.DataFrame(results_list)
+        self.results_df = df
+        # print(df)
+        self.after(0, self.create_table(df))
+
+    def add_identifier_search_by_value(self):
+        to_filter= []
+       
+        def close_window():
+            print("clicked close")
+            self.selected_attributes = [attr for attr in self.selected_attributes if attr not in to_filter]
+            self.identifier_search_frame.destroy()
+
+        def save_values():
+            attribute_id = self.identifier_entry.get().strip()
+            values = self.value_entry.get("0.0", "end")
+            values_array = [line.strip() for line in values.split('\n') if line.strip()]
+            
+            value_dict = {
+                "AttributeId": attribute_id,
+                "Values": values_array
+            }
+            self.selected_attributes.append(value_dict)
+            to_filter.append(value_dict)
+            self.save_values_button.configure(state="disabled")
+            ok_pressed = CTkMessagebox(title="Workflow_ext", message="Values Saved", icon="check", option_1="Ok")
+            response = ok_pressed.get()
+            if response== "Ok":
+                ok_pressed.destroy()
+
+        self.identifier_search_frame = customtkinter.CTkFrame(self.filter_box)
+        self.identifier_search_frame.grid(row=self.row_index, padx=5, pady=2, sticky="nsew")
+        self.identifier_search_frame.grid_columnconfigure(0,weight=1)
+        
+        self.label_frame = customtkinter.CTkFrame(self.identifier_search_frame, fg_color="transparent")
+        self.label_frame.grid(row=0, column=0, sticky="ew")
+        self.label_frame.grid_columnconfigure(1, weight=1)
+
+        self.identifier_label = customtkinter.CTkLabel(self.label_frame, text="Identifier GUID:")
+        self.identifier_label.grid(row=0,column=0, padx=10,pady=(8,0), sticky="w")
+
+        self.close_button = customtkinter.CTkButton(self.label_frame, text="X", command=lambda: close_window(), width=15,height=15, anchor="e")
+        self.close_button.grid(row=0, column=2, padx=5, pady=2, sticky="e")
+
+        self.identifier_entry = customtkinter.CTkEntry(self.identifier_search_frame)
+        self.identifier_entry.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
+
+        self.values_label = customtkinter.CTkLabel(self.identifier_search_frame, text="Values:")
+        self.values_label.grid(row=2, column=0, padx=5, pady=2, sticky="we")
+
+        self.value_entry = customtkinter.CTkTextbox(self.identifier_search_frame)
+        self.value_entry.grid(row=3, column=0, padx=10, pady=(2,10))
+
+        self.save_values_button = customtkinter.CTkButton(self.identifier_search_frame, text="Save Values", command=lambda: save_values())
+        self.save_values_button.grid(row=4, column=0, padx=10, pady=(5,10), sticky="nsew")
+
+        self.row_index += 1
+
+    def add_identifier_contains(self):
+        to_filter=[]
+
+        def close_window():
+            self.exists_attribute = [attr for attr in self.exists_attribute if attr not in to_filter]
+            self.identifier_contains_frame.destroy()
+
+        def switch():
+            on = self.contains_switch.get()
+            if on==1:
+                self.contains_switch.configure(text="Contains")
+            elif on==0:
+                self.contains_switch.configure(text="Does Not Contain")
+
+        def save_values():
+            attribute_id = self.identifier_entry.get()
+            if self.contains_switch.get() == 1:
+                true_false = "true"
+            else:
+                true_false = "false"
+            value_dict = {
+                "AttributeId": attribute_id,
+                "Exists": true_false
+            }
+            self.exists_attribute.append(value_dict)
+            to_filter.append(value_dict)
+            self.save_values_button.configure(state="disabled")
+            ok_pressed = CTkMessagebox(title="Workflow_ext", message="Filter Saved", icon="check", option_1="Ok")
+            response = ok_pressed.get()
+            if response== "Ok":
+                ok_pressed.destroy()
+
+        self.identifier_contains_frame = customtkinter.CTkFrame(self.filter_box)
+        self.identifier_contains_frame.grid(row=self.row_index, padx=5, pady=2, sticky="nsew")
+        self.identifier_contains_frame.grid_columnconfigure(0,weight=1) 
+
+        self.label_frame = customtkinter.CTkFrame(self.identifier_contains_frame, fg_color="transparent")
+        self.label_frame.grid(row=0, column=0, sticky="ew")
+        self.label_frame.grid_columnconfigure(1, weight=1)
+
+        self.identifier_label = customtkinter.CTkLabel(self.label_frame, text="Identifier GUID:")
+        self.identifier_label.grid(row=0,column=0, padx=10,pady=(8,0), sticky="w")
+
+        self.close_button = customtkinter.CTkButton(self.label_frame, text="X", command=lambda: close_window(), width=15,height=15, anchor="e")
+        self.close_button.grid(row=0, column=2, padx=5, pady=2, sticky="e")
+
+        self.identifier_entry = customtkinter.CTkEntry(self.identifier_contains_frame)
+        self.identifier_entry.grid(row=1, column=0, padx=10, pady=5, sticky="nsew")
+
+        self.contains_switch = customtkinter.CTkSwitch(self.identifier_contains_frame, text="Contains", command=lambda: switch())
+        self.contains_switch.grid(row=2, column=0, padx=10, pady=2)
+        self.contains_switch.select()
+
+        self.save_values_button = customtkinter.CTkButton(self.identifier_contains_frame, text="Save Values", command=lambda: save_values())
+        self.save_values_button.grid(row=3, column=0, padx=10, pady=(5,10), sticky="nsew")
+
+        self.row_index += 1
+        None
+
+    def create_table(self,df):
+
+        if self.has_table == True:
+            self.output_table.remove()
+            self.output_frame = customtkinter.CTkScrollableFrame(self.results_frame)
+            self.output_frame.grid(row=0, column=0, padx=(0,10), pady=(15,10), sticky= "nsew")
+        self.output_table = Table(parent=self.output_frame ,dataframe=df, showtoolbar=False, showstatusbar=True, height=600)
+        self.output_table.boxoutlinecolor="black"
+        self.output_table.textcolor = 'white'
+        self.output_table.editable=False
+        self.output_table.rowselectedcolor="#4e57c1"
+        self.output_table.colselectedcolor="#4e57c1"
+        options = {'fontsize':10,'cellbackgr': 'gray' }
+        config.apply_options(options,self.output_table)
+        self.output_table.show()
+        self.search_button.configure(state="normal")
+        self.has_table = True
+
+        self.progress_bar.stop()
+        self.progress_bar.set(1)
+        self.export_to_csv_button.configure(state="normal")
+        self.upgrade_button.configure(state="normal")
+        self.restart_button.configure(state="normal")
+        
+    def start_upgrade(self):
+        self.progress_bar.set(0)
+        self.progress_bar.start()
+        self.stop_event.clear()
+        self.upgrade_thread = threading.Thread(target=lambda: app.upgrade_items(int(self.multiplyer_entry.get()), self.results_df))
+        self.upgrade_thread.start()
+
+    def stop_progress_bar(self):
+        print("made it here")
+        self.stop_event.set()
+        ok_pressed = CTkMessagebox(title="Workflow_ext", message="Action Complete", icon="check", option_1="Ok")
+        response = ok_pressed.get()
+        if response== "Ok":
+            self.progress_bar.stop()
+            self.progress_bar.set(1)
+            ok_pressed.destroy()
+
+    def start_restart(self):
+        self.progress_bar.set(0)
+        self.progress_bar.start()
+        self.stop_event.clear()
+        self.restart_thread = threading.Thread(target=lambda: app.restart_items(int(self.multiplyer_entry.get()), self.results_df))
+        self.restart_thread.start()
+
 class WorkflowEnhance(customtkinter.CTk):
     def __init__(self):
         super().__init__()
@@ -100,6 +544,7 @@ class WorkflowEnhance(customtkinter.CTk):
         self.saved_workflows = []
         self.elapsed_time = None
         self.num_items = int
+        self.product_search_window = None
 
         # configure window
         self.title("Workflow_Ext")
@@ -122,7 +567,7 @@ class WorkflowEnhance(customtkinter.CTk):
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=10)
         self.sidebar_frame.grid(row=0, column=0, rowspan=10, padx = 10, pady = 10, sticky="nsew")
         self.sidebar_frame.grid_columnconfigure(0, weight=1)
-        self.sidebar_frame.grid_rowconfigure(12, weight=1)
+        self.sidebar_frame.grid_rowconfigure(13, weight=1)
 
         # row 0
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Load Workflow", font=customtkinter.CTkFont(size=20, weight="bold"))
@@ -163,23 +608,26 @@ class WorkflowEnhance(customtkinter.CTk):
         self.workflow_selector = customtkinter.CTkOptionMenu(self.sidebar_frame,  command=self.load_workflow)
         self.workflow_selector.grid(row=11, column=0, padx=20, pady=10)
 
+        self.product_search_button = customtkinter.CTkButton(self.sidebar_frame, text="Product Search", command=self.open_product_search, state="disabled")
+        self.product_search_button.grid(row=12, column=0, padx=20, pady= 10)
+
         # row 11
         self.wf_name_label = customtkinter.CTkLabel(self.sidebar_frame, text="Workflow Name:")
-        self.wf_name_label.grid(row=13, column=0, padx=20, pady=(10, 0))
+        self.wf_name_label.grid(row=14, column=0, padx=20, pady=(10, 0))
 
         # row 12
         self.wf_frame = customtkinter.CTkFrame(self.sidebar_frame, height = 40, border_color="gray", border_width=2)
-        self.wf_frame.grid(row=14, column=0, padx=10, pady=(0,15))
+        self.wf_frame.grid(row=15, column=0, padx=10, pady=(0,15))
         self.wf_frame.grid_columnconfigure(0, weight=1)
 
         self.wf_name = customtkinter.CTkLabel(self.wf_frame, text="                        ",font=customtkinter.CTkFont(size=14, weight="bold"))
         self.wf_name.grid(row=0, column=0, pady=5, padx=15)
 
         self.appearance_label = customtkinter.CTkLabel(self.sidebar_frame, text="Theme:")
-        self.appearance_label.grid(row=15, column=0, padx=5, pady=(5, 5))
+        self.appearance_label.grid(row=16, column=0, padx=5, pady=(5, 5))
 
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Dark", "Light", "System"], command=self.change_appearance_mode_event)
-        self.appearance_mode_optionemenu.grid(row=16,column=0, pady=(5,15), padx=5)
+        self.appearance_mode_optionemenu.grid(row=17,column=0, pady=(5,15), padx=5)
 
 
         ### search Frame
@@ -412,6 +860,7 @@ class WorkflowEnhance(customtkinter.CTk):
                 self.export_state_button.configure(state="disabled", text="Load Workflow First")
                 self.upgrade_button.configure(state="disabled", text="Load Workflow First")
                 self.save_button.configure(state="disabled")
+                self.product_search_button.configure(state="disabled")
 
                 self.wf_name.configure(text="                        ")
                 self.title("Workflow_Ext")
@@ -426,6 +875,7 @@ class WorkflowEnhance(customtkinter.CTk):
                 self.search_guids_button.configure(state="normal", text="Search")
                 self.export_state_button.configure(state="normal", text="Export State")
                 self.save_button.configure(state="normal")
+                self.product_search_button.configure(state="normal")
 
                 self.wf_name.configure(text=self.workflow_name)
                 self.title(f"Workflow_Ext -- {self.workflow_name} ({self.env})")
@@ -597,11 +1047,21 @@ class WorkflowEnhance(customtkinter.CTk):
         self.warn_window.cancel_button = customtkinter.CTkButton(self.warn_window, text="Cancel", command=self.warn_window.destroy)
         self.warn_window.cancel_button.grid(row=1, column=1, pady=(5,10), padx=10)
 
-    def export_to_csv(self, filename):
+    def export_to_csv(self, filename, df=pd.DataFrame()):
         
-        self.warn_window.destroy()
+        try:
+            self.warn_window.destroy()
+        except:
+            print("No Warn Window")
+
+        if not df.empty:
+            current_df = df       
+        elif not self.filtered_df.empty:
+            current_df = self.filtered_df
+        else:
+            current_df = self.workflow_statuses
         
-        self.workflow_statuses.to_csv("../../"+filename, index=False)
+        current_df.to_csv("../../"+filename, index=False)
 
         self.output_window = OutputWindow(self)
         self.output_window.grab_set()
@@ -662,12 +1122,18 @@ class WorkflowEnhance(customtkinter.CTk):
 
         return guids_array
 
-    def upgrade_items(self):
+    def upgrade_items(self, wk_num=0, df=pd.DataFrame):
         start_time = time.time()  # Record the start time
-        workers = int(self.search_entry.get())
+        
+        if wk_num > 0:
+            workers = wk_num
+        else:
+            workers = int(self.search_entry.get())
         print(f"Number of Workers: {workers}")
 
-        if self.filtered_df.empty:
+        if not df.empty:
+            current_df = df
+        elif self.filtered_df.empty:
             current_df = self.workflow_statuses
             # print("Using Original DF")
         else:
@@ -712,7 +1178,11 @@ class WorkflowEnhance(customtkinter.CTk):
         }
         self.status_message= f"Upgrade completed in {elapsed_time:.2f} seconds"
 
-        self.after(0, self.upgrade_output)
+        if df.empty:
+            self.after(0, self.upgrade_output)
+        else:
+            self.product_search_window.stop_event.set()
+            self.after(0, self.product_search_window.stop_progress_bar)
 
     def upgrade_output(self):
         self.progress_bar.set(1)
@@ -1021,12 +1491,17 @@ class WorkflowEnhance(customtkinter.CTk):
             restart_thread = threading.Thread(target=self.restart_items)
             restart_thread.start()    
 
-    def restart_items(self):
+    def restart_items(self, wk_num=0, df=pd.DataFrame):
         start_time = time.time()  # Record the start time
-        workers = int(self.search_entry.get())
+        if wk_num > 0:
+            workers = wk_num
+        else:
+            workers = int(self.search_entry.get())
         print(f"Number of Workers: {workers}")
 
-        if self.filtered_df.empty:
+        if not df.empty:
+            current_df = df
+        elif self.filtered_df.empty:
             current_df = self.workflow_statuses
             # print("Using Original DF")
         else:
@@ -1072,8 +1547,12 @@ class WorkflowEnhance(customtkinter.CTk):
         print(f"Upgrade completed in {elapsed_time:.2f} seconds. {self.true_num} items")
         self.status_message= f"Restart completed in {elapsed_time:.2f} seconds"
         self.filtered_df = current_df
-
-        self.after(0, self.restart_output)
+        
+        if df.empty:
+            self.after(0, self.restart_output)
+        else:
+            self.product_search_window.stop_event.set()
+            self.after(0, self.product_search_window.stop_progress_bar)  
     
     def restart_output(self):
         self.progress_bar.set(1)
@@ -1112,6 +1591,12 @@ class WorkflowEnhance(customtkinter.CTk):
         self.output_window.grab_set()
         self.output_window.output_label = customtkinter.CTkLabel(self.output_window, text=f"Results saved to restart_results.csv")
         self.output_window.output_label.grid(row=0, column=0, pady=15)
+
+    def open_product_search(self):
+        
+        self.product_search_window = ProductSearchWindow()
+        self.product_search_window.grab_set()
+
 
 if __name__ == "__main__":
     app = WorkflowEnhance()
