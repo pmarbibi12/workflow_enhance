@@ -84,6 +84,7 @@ class ProductSearchWindow(customtkinter.CTkToplevel):
         self.checkboxes = []
         self.workflowId = app.workflowId
         self.workflowName = app.workflow_name
+        self.env = app.env_url
         self.headers = {
             "Content-Type":"application/json", 
             "Cache-Control": "no-cache", 
@@ -273,7 +274,7 @@ class ProductSearchWindow(customtkinter.CTkToplevel):
                 "Language": "en-US"
             }
 
-        api_url = "https://api.syndigo.com/ui/product?includeMetadata=false&includeWorkflowData=true&skip=0&take=1"
+        api_url = f"https://{self.env}/ui/product?includeMetadata=false&includeWorkflowData=true&skip=0&take=1"
         response = requests.post(api_url, data=json.dumps(body), headers=self.headers)
         # print(json.dumps(body))
         if response.status_code == 200:
@@ -318,7 +319,7 @@ class ProductSearchWindow(customtkinter.CTkToplevel):
                 "DataOwner": self.dataowner,
                 "Language": "en-US"
             }
-        api_url = "https://api.syndigo.com/ui/product?includeMetadata=false&includeWorkflowData=true"
+        api_url = f"https://{self.env}/ui/product?includeMetadata=false&includeWorkflowData=true"
         skip = f"&skip=0&take={self.num_results}"
         response = requests.post(api_url+skip, data=json.dumps(body), headers=self.headers)
         json_response = response.json()
